@@ -23,7 +23,9 @@
 /* ---------- Top nav ---------- */
 .topbar { background: #fff; border-bottom: 1px solid var(--line); box-shadow: none; }
 .topbar-inner { max-width: 1240px; gap: 22px; }
+.brand { flex: none; }
 .brand img { height: 38px; }
+.brand-name { white-space: nowrap; }
 .topnav { flex-direction: row; gap: 2px; margin-right: auto; }
 .topnav a {
   padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2);
@@ -124,6 +126,9 @@
 .profile-wrap { max-width: 1240px; margin: 0 auto; padding: 24px; }
 
 /* ---------- Narrow screens ---------- */
+@media (max-width: 1360px) {
+  .brand-name small { display: none; }
+}
 @media (max-width: 1100px) {
   .topnav a .count { display: none; }
   .search { display: none; }
