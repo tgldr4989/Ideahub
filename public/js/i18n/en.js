@@ -44,7 +44,8 @@ export default {
   changeStatus: "Move to:", statusChanged: "Status updated",
 
   // idea page
-  commentsTitle: "Comments",
+  commentsTitle: "Comments", progress: "Progress", currentStage: "Current stage",
+  aboutIdea: "About this idea", type: "Type", posted: "Posted",
   details: "Details", addDetails: "Add details", editDetails: "Edit details", detailsSaved: "Details saved",
   addDetailsHint: "Add the problem, your solution and links to documents so colleagues can understand the idea and join.",
   noDetails: "The author hasn't added details yet.",

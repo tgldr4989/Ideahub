@@ -1,82 +1,161 @@
-// HTML for the idea page (#/i/<id>): status, write-up, documents, team and comments.
+// The idea landing page (#/i/<id>): hero, actions, the write-up, documents, comments,
+// and a sidebar with progress, team and facts.
 import { DETAIL_SECTIONS, STATUS, STATUSES } from "../config.js";
 import { t } from "../i18n/index.js";
-import { esc } from "../utils.js";
+import { esc, formatDate, timeAgo } from "../utils.js";
 import { avatarHTML } from "./avatar.js";
-import { commentsHTML, coverHTML, headerHTML, reactionBarHTML, tagsHTML } from "./post-card.js";
+import { commentsHTML, reactionBarHTML } from "./post-card.js";
 
 export function ideaPageHTML(i) {
   return `
-  <article class="post idea-page" data-post="${i.id}">
-    ${headerHTML(i)}
-    ${i.img ? coverHTML(i, { link: false }) : ""}
-    <div class="idea-main">
-      <h1>${esc(i.title)}</h1>
-      ${i.desc ? `<p class="lead">${esc(i.desc)}</p>` : ""}
-      ${tagsHTML(i)}
+  <div data-post="${i.id}">
+    ${heroHTML(i)}
+    <div class="landing-body">
+      <div class="landing-wrap">
+        ${actionStripHTML(i)}
+        <div class="landing-grid">
+          <div class="landing-main">
+            ${detailsHTML(i)}
+            ${documentsHTML(i)}
+            ${commentsCardHTML(i)}
+          </div>
+          <aside class="landing-side">
+            ${progressCardHTML(i)}
+            ${teamCardHTML(i)}
+            ${aboutCardHTML(i)}
+          </aside>
+        </div>
+      </div>
     </div>
-    ${statusHTML(i)}
-    ${reactionBarHTML(i)}
-    ${detailsHTML(i)}
-    ${linksHTML(i)}
-    ${teamHTML(i)}
-    ${section(`💬 ${t("commentsTitle")}`, "", "")}
-    ${commentsHTML(i, { showAll: true })}
-  </article>`;
+  </div>`;
 }
 
-function section(title, action, body, cls = "") {
+// ---------------------------------------------------------------- hero
+
+function heroHTML(i) {
+  const status = STATUS[i.status] || STATUS.new;
+  const ownerButtons = i.mine ? `
+      <div class="hero-owner">
+        <button class="hero-btn" data-edit="${i.id}">✏️ ${t("editTitle")}</button>
+        <button class="hero-btn" data-edit-details>📄 ${t("editDetails")}</button>
+        <button class="hero-btn icon" data-delete="${i.id}" title="${esc(t("deleteIdea"))}" aria-label="${esc(t("deleteIdea"))}">🗑</button>
+      </div>` : "";
+  const meta = [i.position, i.dept].filter(Boolean).join(" · ");
   return `
-    <section class="idea-section ${cls}">
-      <div class="sec-head"><h3>${title}</h3>${action}</div>
-      ${body}
+    <section class="landing-hero cover-${+i.cover || 1}">
+      <div class="landing-wrap">
+        <div class="hero-top">
+          <button class="hero-back" data-go-feed>${t("back")}</button>
+          ${ownerButtons}
+        </div>
+        <div class="hero-grid ${i.img ? "" : "no-image"}">
+          <div class="hero-text">
+            <div class="hero-badges">
+              <span class="hero-pill">${t(i.type === "hack" ? "taglineHack" : "taglineProc")}</span>
+              <span class="hero-pill s-${status.k}"><span class="dot"></span>${t(status.label)}</span>
+            </div>
+            <h1>${esc(i.title)}</h1>
+            ${i.desc ? `<p class="hero-lead">${esc(i.desc)}</p>` : ""}
+            <div class="hero-author">
+              ${avatarHTML(i.author, i.authorAvatar, "", i.authorId)}
+              <div>
+                <div class="name link" data-profile="${i.authorId}">${esc(i.author)}</div>
+                <div class="meta">${esc(meta ? `${meta} · ` : "")}${timeAgo(i.t)}${i.edited ? ` · ${t("edited")}` : ""}</div>
+              </div>
+            </div>
+          </div>
+          ${i.img ? `<div class="hero-media"><img src="${esc(i.img)}" alt=""></div>` : ""}
+        </div>
+      </div>
     </section>`;
 }
 
-/** New → Confirmed → In progress → Done, plus the moves this person may make. */
-function statusHTML(i) {
-  const current = STATUSES.findIndex(s => s.k === i.status);
-  const parts = [];
-  STATUSES.forEach((s, n) => {
-    if (n > 0) parts.push(`<div class="bar ${n <= current ? "past" : ""}"></div>`);
-    const state = n < current ? "past" : n === current ? "now" : "";
-    parts.push(`<div class="step ${state}"><span class="dot">${n < current ? "✓" : n + 1}</span><span class="lbl">${t(s.label)}</span></div>`);
-  });
-  const options = i.statusOptions || [];
-  const actions = options.length ? `
-      <div class="status-actions">
-        <span>${t("changeStatus")}</span>
-        ${options.map(s => `<button class="btn-soft sm s-${s}" data-set-status="${s}"><span class="dot"></span>${t(STATUS[s].label)}</button>`).join("")}
-      </div>` : "";
-  return `<section class="idea-section"><div class="stepper">${parts.join("")}</div>${actions}</section>`;
+/** Reactions and comment count, plus a shortcut to the join form when joining is open. */
+function actionStripHTML(i) {
+  const canJoin = !i.mine && i.status === "confirmed" && !["pending", "accepted"].includes(i.myRequest?.status);
+  return `
+    <div class="action-strip">
+      ${reactionBarHTML(i)}
+      ${canJoin ? `<button class="btn-primary" data-focus-join>🙋 ${t("joinTeam")}</button>` : ""}
+    </div>`;
+}
+
+// ---------------------------------------------------------------- main column
+
+function card(title, body, { action = "", cls = "" } = {}) {
+  return `
+    <section class="l-card ${cls}">
+      <div class="l-head"><h2>${title}</h2>${action}</div>
+      ${body}
+    </section>`;
 }
 
 function detailsHTML(i) {
   const details = i.details || {};
   const filled = DETAIL_SECTIONS.filter(([key]) => details[key]);
-  const hasAny = filled.length > 0 || (i.links || []).length > 0;
-  const action = i.mine
-    ? `<button class="btn-soft sm" data-edit-details>${hasAny ? `✏️ ${t("editDetails")}` : `＋ ${t("addDetails")}`}</button>` : "";
-  const body = filled.length
-    ? filled.map(([key, label, icon]) => `<div class="detail"><h4>${icon} ${t(label)}</h4><p>${esc(details[key])}</p></div>`).join("")
-    : `<p class="muted">${t(i.mine ? "addDetailsHint" : "noDetails")}</p>`;
-  return section(`📄 ${t("details")}`, action, body);
+  if (!filled.length) {
+    if (!i.mine) return card(`📄 ${t("details")}`, `<p class="muted">${t("noDetails")}</p>`);
+    return `
+      <section class="l-card details-empty">
+        <div class="big">📄</div>
+        <h2>${t("addDetails")}</h2>
+        <p>${t("addDetailsHint")}</p>
+        <button class="btn-primary" data-edit-details>＋ ${t("addDetails")}</button>
+      </section>`;
+  }
+  return `
+    <div class="detail-grid">
+      ${filled.map(([key, label, icon]) => `
+        <section class="l-card detail-card">
+          <div class="detail-icon">${icon}</div>
+          <h3>${t(label)}</h3>
+          <p>${esc(details[key])}</p>
+        </section>`).join("")}
+    </div>`;
 }
 
-function linksHTML(i) {
+function documentsHTML(i) {
   if (!i.links?.length) return "";
   const items = i.links.map(link => `
       <li><a href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">
-        <span>🔗</span><span class="lt">${esc(link.title)}</span><span class="lu">${esc(hostOf(link.url))}</span>
+        <span class="doc-icon">📎</span>
+        <span class="doc-text"><span class="lt">${esc(link.title)}</span><span class="lu">${esc(hostOf(link.url))}</span></span>
+        <span class="doc-open">↗</span>
       </a></li>`).join("");
-  return section(`📎 ${t("links")}`, "", `<ul class="links">${items}</ul>`);
+  return card(`📎 ${t("links")}`, `<ul class="links">${items}</ul>`);
 }
 
 function hostOf(url) {
   try { return new URL(url).host; } catch { return ""; }
 }
 
-function teamHTML(i) {
+function commentsCardHTML(i) {
+  return card(`💬 ${t("commentsTitle")} · ${i.comments.length}`, commentsHTML(i, { showAll: true }), { cls: "comments-card" });
+}
+
+// ---------------------------------------------------------------- sidebar
+
+/** New → Confirmed → In progress → Done as a vertical timeline, plus the moves this person may make. */
+function progressCardHTML(i) {
+  const current = STATUSES.findIndex(s => s.k === i.status);
+  const steps = STATUSES.map((s, n) => {
+    const state = n < current ? "past" : n === current ? "now" : "";
+    return `
+      <li class="${state}">
+        <span class="dot">${n < current ? "✓" : n + 1}</span>
+        <span class="lbl">${t(s.label)}${n === current ? `<small>${t("currentStage")}</small>` : ""}</span>
+      </li>`;
+  }).join("");
+  const options = i.statusOptions || [];
+  const actions = options.length ? `
+      <div class="status-actions">
+        <span>${t("changeStatus")}</span>
+        ${options.map(s => `<button class="btn-soft sm s-${s}" data-set-status="${s}"><span class="dot"></span>${t(STATUS[s].label)}</button>`).join("")}
+      </div>` : "";
+  return card(`📍 ${t("progress")}`, `<ol class="timeline">${steps}</ol>${actions}`);
+}
+
+function teamCardHTML(i) {
   const members = [
     { userId: i.authorId, name: i.author, avatar: i.authorAvatar, role: t("author") },
     ...(i.team || []).map(m => ({ ...m, role: m.position || m.dept || "" })),
@@ -86,7 +165,7 @@ function teamHTML(i) {
         ${avatarHTML(m.name, m.avatar, "sm", m.userId)}
         <div><div class="name link" data-profile="${m.userId}">${esc(m.name)}</div><div class="meta">${esc(m.role)}</div></div>
       </div>`).join("")}</div>`;
-  return section(`👥 ${t("team")} · ${members.length}`, "", list + (i.mine ? requestsHTML(i) : joinHTML(i)));
+  return card(`👥 ${t("team")} · ${members.length}`, list + (i.mine ? requestsHTML(i) : joinHTML(i)), { cls: "team-card" });
 }
 
 /** What a colleague sees: join form, their pending request, or their membership. */
@@ -115,16 +194,28 @@ function requestsHTML(i) {
     <div class="requests-title">${t("requests")} · ${pending.length}</div>
     <div class="requests">${pending.map(r => `
       <div class="request">
-        ${avatarHTML(r.name, r.avatar, "sm", r.userId)}
-        <div class="who">
-          <div class="name link" data-profile="${r.userId}">${esc(r.name)}</div>
-          <div class="meta">${esc([r.position, r.dept].filter(Boolean).join(" · "))}</div>
-          ${r.message ? `<div class="msg">${esc(r.message)}</div>` : ""}
+        <div class="request-who">
+          ${avatarHTML(r.name, r.avatar, "sm", r.userId)}
+          <div>
+            <div class="name link" data-profile="${r.userId}">${esc(r.name)}</div>
+            <div class="meta">${esc([r.position, r.dept].filter(Boolean).join(" · "))}</div>
+          </div>
         </div>
+        ${r.message ? `<div class="msg">${esc(r.message)}</div>` : ""}
         <div class="btns">
           <button class="btn-primary sm" data-answer="accepted" data-user="${r.userId}">${t("accept")}</button>
           <button class="btn-ghost sm" data-answer="declined" data-user="${r.userId}">${t("decline")}</button>
         </div>
       </div>`).join("")}
     </div>`;
+}
+
+function aboutCardHTML(i) {
+  const rows = [
+    [t("type"), t(i.type === "hack" ? "hackIdea" : "procIdea")],
+    [t("posted"), formatDate(i.t)],
+  ].map(([label, value]) => `<div class="fact"><span>${label}</span><b>${esc(value)}</b></div>`).join("");
+  const tags = i.tags.length
+    ? `<div class="fact-tags">${i.tags.map(tag => `<button class="tag-chip" data-tag="${esc(tag)}">#${esc(tag)}</button>`).join("")}</div>` : "";
+  return card(`ℹ️ ${t("aboutIdea")}`, rows + tags);
 }

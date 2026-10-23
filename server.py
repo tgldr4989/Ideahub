@@ -811,6 +811,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
+        if not self.path.startswith(("/api/", "/uploads/")):   # those set their own caching
+            # page, CSS and JS modules: always check for a newer version (a 304 when unchanged),
+            # so after a deploy the browser never mixes old and new modules
+            self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
     def serve_upload(self, name):

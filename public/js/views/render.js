@@ -14,8 +14,7 @@ import { $, $$, esc } from "../utils.js";
 export function render(animate = false) {
   closePicker();
   if (state.view === "idea") {
-    $("#ideaPage").innerHTML = state.idea ? ideaPageHTML(state.idea) : "";
-    renderSide();
+    $("#ideaLanding").innerHTML = state.idea ? ideaPageHTML(state.idea) : "";
     return;
   }
   const onFeed = state.view === "feed";

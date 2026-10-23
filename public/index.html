@@ -78,10 +78,6 @@
       <div class="status-tabs" id="statusTabs"></div>
       <section class="feed" id="feed"></section>
     </div>
-    <div id="ideaView" hidden>
-      <button class="back" data-go-feed data-i18n="back"></button>
-      <div id="ideaPage"></div>
-    </div>
     <div id="profileView" hidden>
       <button class="back" data-go-feed data-i18n="back"></button>
       <div id="profileCard"></div>
@@ -116,6 +112,9 @@
     </div>
   </aside>
 </div>
+
+<!-- Idea landing page (#/i/<id>); replaces the three-column layout while open -->
+<div class="landing" id="ideaLanding" hidden></div>
 
 <button class="fab" data-open-new aria-label="New idea">＋</button>
 

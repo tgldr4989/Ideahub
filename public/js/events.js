@@ -4,7 +4,7 @@ import { deleteComment, focusCommentBox, postComment, rememberDraft, toggleComme
 import { setFilter, setQuery, setSort, setStatusFilter } from "./features/feed-controls.js";
 import { closeIdeaForm, openIdeaForm } from "./features/idea-form.js";
 import {
-  answerJoin, cancelJoin, changeStatus, closeDetailsEditor, openDetailsEditor, sendJoinRequest,
+  answerJoin, cancelJoin, changeStatus, closeDetailsEditor, focusJoinForm, openDetailsEditor, sendJoinRequest,
 } from "./features/idea-page.js";
 import { deleteIdea } from "./features/ideas.js";
 import { changeLanguage } from "./features/language.js";
@@ -38,6 +38,7 @@ const CLICK_ACTIONS = [
   ["[data-edit-details]",  () => openDetailsEditor()],
   ["[data-cancel-join]",   el => cancelJoin(el.dataset.cancelJoin)],
   ["[data-answer]",        el => answerJoin(id(el, "user"), el.dataset.answer)],
+  ["[data-focus-join]",    () => focusJoinForm()],
   // profile
   ["[data-profile]",       (el, e) => { e.preventDefault(); openProfile(el.dataset.profile); }],
   ["[data-go-feed]",       () => goToFeed()],

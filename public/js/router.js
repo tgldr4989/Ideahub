@@ -10,7 +10,7 @@ const ROUTES = [
   { view: "idea",    pattern: /^#\/i\/(\d+)$/, load: id => loadIdea(id) },
 ];
 // each view's container; the others are emptied so a card exists only once in the page
-const VIEWS = { feed: ["#feedView", "#feed"], profile: ["#profileView", "#profileFeed"], idea: ["#ideaView", "#ideaPage"] };
+const VIEWS = { feed: ["#feedView", "#feed"], profile: ["#profileView", "#profileFeed"], idea: ["#ideaLanding", "#ideaLanding"] };
 
 export async function loadProfile(id) {
   state.profile = (await api.getUser(id)).user;
@@ -42,6 +42,7 @@ export async function route() {
     $(section).hidden = view !== next;
     if (view !== next) $(list).innerHTML = "";
   }
+  $(".layout").hidden = next === "idea";   // the idea page is a full-width landing page of its own
   renderNav();
   render();
 }

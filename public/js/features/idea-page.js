@@ -38,6 +38,14 @@ export async function sendJoinRequest(form) {
   if (!ok) button.disabled = false;
 }
 
+/** The "Request to join" button at the top scrolls down to the team card's form. */
+export function focusJoinForm() {
+  const message = document.querySelector(".join-form textarea");
+  if (!message) return;
+  message.scrollIntoView({ behavior: "smooth", block: "center" });
+  message.focus({ preventScroll: true });
+}
+
 /** `kind` is "cancel" (pending request) or "leave" (already on the team). */
 export function cancelJoin(kind) {
   if (kind === "leave" && !confirm(t("confirmLeave"))) return;

@@ -44,7 +44,8 @@ export default {
   changeStatus: "Төлөв өөрчлөх:", statusChanged: "Төлөв шинэчлэгдлээ",
 
   // idea page
-  commentsTitle: "Сэтгэгдэл",
+  commentsTitle: "Сэтгэгдэл", progress: "Явц", currentStage: "Одоогийн шат",
+  aboutIdea: "Санааны тухай", type: "Төрөл", posted: "Нийтэлсэн",
   details: "Дэлгэрэнгүй", addDetails: "Дэлгэрэнгүй нэмэх", editDetails: "Дэлгэрэнгүй засах", detailsSaved: "Дэлгэрэнгүй хадгалагдлаа",
   addDetailsHint: "Асуудал, шийдэл болон баримт бичгийн холбоосоо нэмбэл хамт олон санааг ойлгож, нэгдэхэд хялбар болно.",
   noDetails: "Зохиогч дэлгэрэнгүй мэдээлэл нэмээгүй байна.",

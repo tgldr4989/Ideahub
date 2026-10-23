@@ -1,6 +1,6 @@
 // Small DOM and formatting helpers.
 import { AVATAR_COLORS } from "./config.js";
-import { t } from "./i18n/index.js";
+import { getLang, t } from "./i18n/index.js";
 
 export const $ = selector => document.querySelector(selector);
 export const $$ = selector => [...document.querySelectorAll(selector)];
@@ -20,6 +20,11 @@ export function timeAgo(ts) {
   if (minutes < 60) return t("mAgo", { n: minutes });
   const hours = Math.round(minutes / 60);
   return hours < 24 ? t("hAgo", { n: hours }) : t("dAgo", { n: Math.round(hours / 24) });
+}
+
+export function formatDate(ts) {
+  return new Date(ts).toLocaleDateString(getLang() === "mn" ? "mn-MN" : "en-US",
+    { year: "numeric", month: "long", day: "numeric" });
 }
 
 /** Shrink a photo in the browser before upload (JPEG). `square` centre-crops, for profile photos. */
