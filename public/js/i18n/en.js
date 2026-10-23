@@ -6,12 +6,15 @@ export default {
 
   // feed
   sortTop: "🔥 Top", sortNew: "🆕 Newest",
-  catAll: "All", catHack: "Hackathon", catProc: "Process", catAI: "AI", catAutomation: "Automation",
-  catCulture: "Culture", catFinance: "Finance", catOffice: "Office",
-  titleAll: "All ideas", titleMine: "My ideas", titleCat: "{label} ideas",
+  titleAll: "All ideas", titleMine: "My ideas", titleHack: "Hackathon ideas", titleProc: "Process ideas",
   noMatch: "No ideas match “{q}”", tryOther: "Try a different search.",
   noMine: "You haven't shared an idea yet", noMineSub: "Got something we could build or do better?",
   noIdeas: "No ideas here yet", beFirstShare: "Be the first to share one ✨",
+
+  // announcement above the feed — edit this text to change what everyone sees
+  annBadge: "Announcement",
+  annTitle: "Your ideas can shape Coremind's next 10 years",
+  annText: "Anyone can post a hackathon idea or a way to improve how we work. Colleagues react, and the most-loved ideas rise to the top.",
 
   // right-hand panels
   annivTitle: "10 years. 10× ideas.",

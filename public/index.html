@@ -58,7 +58,15 @@
 
   <main>
     <div id="feedView">
-      <div class="stories" id="stories"></div>
+      <section class="announce">
+        <div class="announce-icon">📣</div>
+        <div class="announce-text">
+          <span class="announce-badge" data-i18n="annBadge"></span>
+          <h2 data-i18n="annTitle"></h2>
+          <p data-i18n="annText"></p>
+        </div>
+        <button class="btn-primary" data-open-new><span class="plus">＋</span> <span data-i18n="shareIdea"></span></button>
+      </section>
       <div class="feed-head">
         <h1 id="feedTitle"></h1>
         <div class="tabs" id="sortTabs">

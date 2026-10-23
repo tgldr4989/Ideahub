@@ -43,26 +43,29 @@
 .nav .count { margin-left: auto; font-size: 12px; color: var(--ink-3); font-weight: 600; }
 .rail .btn-primary { width: 100%; justify-content: center; margin-top: 18px; padding: 13px; }
 
-/* ---------- Category circles ---------- */
-.stories {
-  display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 6px;
-  scrollbar-width: none;
+/* ---------- Announcement above the feed ---------- */
+.announce {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px; margin-bottom: 20px; border-radius: var(--radius);
+  background: linear-gradient(135deg, #eef0ff 0%, #f4ecff 55%, #e3faf4 100%);
+  border: 1px solid #dcdcf7;
 }
-.stories::-webkit-scrollbar { display: none; }
-.story { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 74px; }
-.story-ring {
-  width: 64px; height: 64px; border-radius: 50%; padding: 3px; background: var(--line);
-  transition: transform .15s ease;
+.announce::after {
+  content: ""; position: absolute; width: 160px; height: 160px; right: -50px; top: -70px; border-radius: 50%;
+  border: 24px solid rgba(122,43,226,.07); pointer-events: none;
 }
-.story.active .story-ring, .story:hover .story-ring { background: var(--grad-ring); }
-.story:hover .story-ring { transform: scale(1.04); }
-.story-inner {
-  width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fff;
-  display: grid; place-items: center; font-size: 24px;
-  background: linear-gradient(135deg, #eef0ff, #e8fbf7);
+.announce-icon {
+  flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 24px;
+  background: #fff; box-shadow: 0 4px 12px rgba(75,47,214,.15);
 }
-.story span { font-size: 12px; font-weight: 600; color: var(--ink-2); max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.story.active span { color: var(--ink); }
+.announce-text { flex: 1; min-width: 0; }
+.announce-badge {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--violet); background: #fff; padding: 3px 8px; border-radius: 999px; margin-bottom: 6px;
+}
+.announce h2 { margin: 0; font-size: 16px; line-height: 1.35; letter-spacing: -.01em; }
+.announce p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.announce .btn-primary { flex: none; position: relative; z-index: 1; }
 
 /* ---------- Feed heading and sort tabs ---------- */
 .feed-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
@@ -123,4 +126,6 @@
 @media (max-width: 520px) {
   .topbar-inner { padding: 10px 16px; gap: 12px; }
   .brand img { height: 36px; }
+  .announce { flex-wrap: wrap; padding: 16px; }
+  .announce .btn-primary { width: 100%; justify-content: center; }
 }

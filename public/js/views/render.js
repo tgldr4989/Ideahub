@@ -1,5 +1,4 @@
 // Drawing the page from state: the idea list (feed or profile), side panels, header avatar.
-import { CATEGORIES } from "../config.js";
 import { avatarHTML } from "../components/avatar.js";
 import { emptyStateHTML, postCardHTML } from "../components/post-card.js";
 import { profileCardHTML } from "../components/profile-card.js";
@@ -44,22 +43,12 @@ export function renderSide() {
   $$("[data-count]").forEach(el => { el.textContent = counts[el.dataset.count]; });
 }
 
-export function renderCategories() {
-  $("#stories").innerHTML = CATEGORIES.map(c => `
-    <button class="story ${state.filter.toLowerCase() === c.k.toLowerCase() ? "active" : ""}" data-filter="${c.k}">
-      <div class="story-ring"><div class="story-inner">${c.e}</div></div><span>${t(c.label)}</span>
-    </button>`).join("");
-}
+const FILTER_TITLES = { all: "titleAll", mine: "titleMine", hack: "titleHack", proc: "titleProc" };
 
 export function renderFeedTitle() {
   const { filter } = state;
-  const cat = CATEGORIES.find(c => c.k.toLowerCase() === filter.toLowerCase());
-  let title;
-  if (filter === "all") title = t("titleAll");
-  else if (filter === "mine") title = t("titleMine");
-  else if (filter.startsWith("#")) title = cat ? `#${t(cat.label)}` : filter;
-  else title = t("titleCat", { label: t(cat.label) });
-  $("#feedTitle").textContent = title;
+  // a #tag filter (from clicking a tag on a post) shows the tag itself
+  $("#feedTitle").textContent = filter.startsWith("#") ? filter : t(FILTER_TITLES[filter]);
 }
 
 /** Left menu: highlight the active filter (nothing while on a profile). */

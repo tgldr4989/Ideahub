@@ -1,14 +1,13 @@
-// Category filter, sort tabs and search.
+// Feed filter (left menu, tags), sort tabs and search.
 import { goToFeed } from "../router.js";
 import { state } from "../state.js";
 import { $$ } from "../utils.js";
-import { render, renderCategories, renderFeedTitle, renderNav } from "../views/render.js";
+import { render, renderFeedTitle, renderNav } from "../views/render.js";
 
 export function setFilter(filter) {
   state.filter = filter;
   renderNav();
   renderFeedTitle();
-  renderCategories();
   if (state.view !== "feed") goToFeed();   // the route change redraws
   else render();
 }

@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { setLang } from "../i18n/index.js";
 import { state } from "../state.js";
 import { applyStaticText } from "../ui/static-text.js";
-import { render, renderCategories, renderFeedTitle } from "../views/render.js";
+import { render, renderFeedTitle } from "../views/render.js";
 import { refreshIdeaFormText } from "./idea-form.js";
 import { translateSignIn } from "./signin.js";
 
@@ -12,7 +12,6 @@ export function applyLanguage() {
   applyStaticText();
   translateSignIn();
   refreshIdeaFormText();
-  renderCategories();
   renderFeedTitle();
   render();
 }

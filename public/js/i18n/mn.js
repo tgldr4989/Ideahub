@@ -6,12 +6,15 @@ export default {
 
   // feed
   sortTop: "🔥 Шилдэг", sortNew: "🆕 Шинэ",
-  catAll: "Бүгд", catHack: "Хакатон", catProc: "Процесс", catAI: "AI", catAutomation: "Автоматжуулалт",
-  catCulture: "Соёл", catFinance: "Санхүү", catOffice: "Оффис",
-  titleAll: "Бүх санаа", titleMine: "Миний санаа", titleCat: "{label} санаа",
+  titleAll: "Бүх санаа", titleMine: "Миний санаа", titleHack: "Хакатоны санаа", titleProc: "Процессын санаа",
   noMatch: "“{q}”-д тохирох санаа алга", tryOther: "Өөр үгээр хайгаад үзээрэй.",
   noMine: "Та одоогоор санаа хуваалцаагүй байна", noMineSub: "Бүтээж эсвэл сайжруулж болох зүйл байна уу?",
   noIdeas: "Одоогоор санаа алга", beFirstShare: "Эхний санааг та хуваалцаарай ✨",
+
+  // announcement above the feed
+  annBadge: "Зарлал",
+  annTitle: "Таны санаа Coremind-ийн дараагийн 10 жилийг бүтээнэ",
+  annText: "Хэн ч хакатоны санаа эсвэл ажлаа сайжруулах санаагаа нийтэлж болно. Хамт олон хариу үйлдэл үзүүлж, хамгийн их дэмжлэгтэй санаанууд дээр гарна.",
 
   // right-hand panels
   annivTitle: "10 жил. 10× санаа.",
