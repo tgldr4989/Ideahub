@@ -149,3 +149,7 @@
   .filters .leader, .filters h4:nth-of-type(2) { display: none; }
   .profile-wrap { padding: 16px; }
 }
+
+/* idea page and profile banners: same navy as the home banner instead of the purple cover gradients */
+.landing-hero, .landing-hero[class*="cover-"] { background: linear-gradient(120deg, var(--navy) 0%, var(--navy-2) 100%); }
+.profile-cover { background: linear-gradient(120deg, var(--navy) 0%, var(--navy-2) 100%); }
