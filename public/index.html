@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/post.css">
 <link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/idea.css">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -74,7 +75,12 @@
           <button data-sort="new" data-i18n="sortNew"></button>
         </div>
       </div>
+      <div class="status-tabs" id="statusTabs"></div>
       <section class="feed" id="feed"></section>
+    </div>
+    <div id="ideaView" hidden>
+      <button class="back" data-go-feed data-i18n="back"></button>
+      <div id="ideaPage"></div>
     </div>
     <div id="profileView" hidden>
       <button class="back" data-go-feed data-i18n="back"></button>
@@ -203,6 +209,44 @@
       <div class="err" id="pErr"></div>
       <button type="button" class="btn-ghost" data-close-profile data-i18n="cancel"></button>
       <button type="submit" class="btn-primary" id="pSave" data-i18n="save"></button>
+    </div>
+  </form>
+</div>
+
+<!-- Idea details dialog (idea page, author only) -->
+<div class="scrim" id="detailsScrim">
+  <form class="modal" id="detailsForm" autocomplete="off">
+    <div class="modal-head">
+      <h2 data-i18n="editDetails"></h2>
+      <button type="button" class="x" data-close-details aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="d-problem">🧩 <span data-i18n="dProblem"></span></label>
+        <textarea id="d-problem" class="textarea short" maxlength="4000" data-i18n-ph="dProblemPh"></textarea>
+      </div>
+      <div class="field">
+        <label for="d-solution">💡 <span data-i18n="dSolution"></span></label>
+        <textarea id="d-solution" class="textarea short" maxlength="4000" data-i18n-ph="dSolutionPh"></textarea>
+      </div>
+      <div class="field">
+        <label for="d-impact">📈 <span data-i18n="dImpact"></span></label>
+        <textarea id="d-impact" class="textarea short" maxlength="4000" data-i18n-ph="dImpactPh"></textarea>
+      </div>
+      <div class="field">
+        <label for="d-resources">🧰 <span data-i18n="dResources"></span></label>
+        <textarea id="d-resources" class="textarea short" maxlength="4000" data-i18n-ph="dResourcesPh"></textarea>
+      </div>
+      <div class="field">
+        <label>📎 <span data-i18n="links"></span></label>
+        <div id="linkRows"></div>
+        <button type="button" class="btn-soft sm" id="addLink">＋ <span data-i18n="addLink"></span></button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="err" id="dErr"></div>
+      <button type="button" class="btn-ghost" data-close-details data-i18n="cancel"></button>
+      <button type="submit" class="btn-primary" id="dSave" data-i18n="save"></button>
     </div>
   </form>
 </div>

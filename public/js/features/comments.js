@@ -5,8 +5,8 @@ import { findIdea, state } from "../state.js";
 import { toast } from "../ui/toast.js";
 import { redrawCard } from "../views/render.js";
 
-/** True while someone types a comment or a search, so background refreshes don't redraw under them. */
-export const isTyping = () => document.activeElement?.matches?.(".comment-input, #q") ?? false;
+/** True while someone types anywhere (comment, search, join message), so background refreshes don't redraw under them. */
+export const isTyping = () => document.activeElement?.matches?.("input, textarea") ?? false;
 
 export async function postComment(ideaId, form) {
   const input = form.querySelector(".comment-input");

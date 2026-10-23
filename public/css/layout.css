@@ -75,6 +75,19 @@
 .tabs button.active { background: var(--ink); color: #fff; }
 .feed { display: flex; flex-direction: column; gap: 22px; }
 
+/* ---------- Status tabs ---------- */
+.status-tabs { display: flex; gap: 8px; overflow-x: auto; margin: -4px 0 16px; padding-bottom: 2px; scrollbar-width: none; }
+.status-tabs::-webkit-scrollbar { display: none; }
+.status-tabs button {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 700; color: var(--ink-2);
+}
+.status-tabs button:hover { border-color: #c9cbe0; }
+.status-tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.status-tabs .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s); }
+.status-tabs .n { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.status-tabs button.active .n { color: rgba(255,255,255,.7); }
+
 /* ---------- Right-hand panels ---------- */
 .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 18px; }
 .panel h4 { margin: 0 0 14px; font-size: 14px; letter-spacing: -.01em; display: flex; align-items: center; justify-content: space-between; }

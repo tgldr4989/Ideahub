@@ -7,11 +7,11 @@ import { changeLanguage } from "./features/language.js";
 import { isPickerOpen } from "./features/reaction-picker.js";
 import { showSignIn } from "./features/signin.js";
 import { getLang, t } from "./i18n/index.js";
-import { loadProfile, route } from "./router.js";
+import { loadIdea, loadProfile, route } from "./router.js";
 import { state } from "./state.js";
 import { toast } from "./ui/toast.js";
 import { $ } from "./utils.js";
-import { renderMe } from "./views/render.js";
+import { render, renderMe } from "./views/render.js";
 
 export async function boot() {
   try {
@@ -58,6 +58,12 @@ async function refresh() {
   // don't redraw under someone who is typing, has the emoji row open, or just reacted
   if (!state.me || document.hidden || state.reorderTimer || isTyping() || isPickerOpen()) return;
   try {
+    if (state.view === "idea" && state.idea) {
+      await loadIdeas();
+      await loadIdea(state.idea.id);   // team, requests and status may have changed
+      render();
+      return;
+    }
     const onProfile = state.view === "profile" && state.profile;
     if (onProfile) await loadProfile(state.profile.id);
     await loadIdeas({ animate: true, force: Boolean(onProfile) });

@@ -46,6 +46,26 @@
 }
 .rank.gold { background: linear-gradient(135deg, #ffe58a, #ffc83d); }
 
+/* ---------- Status ---------- */
+.s-new { --s: #8a8ca8; }
+.s-confirmed { --s: #7a2be2; }
+.s-in_progress { --s: #e0812f; }
+.s-done { --s: #0f9a78; }
+.status-badge {
+  position: absolute; z-index: 2; top: 14px; right: 14px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.95); color: var(--ink); font-weight: 800; font-size: 12px;
+  padding: 6px 10px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+.status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s); }
+
+/* cover and title open the idea page */
+.media[data-open-idea] { cursor: pointer; }
+.media[data-open-idea] > img, .media[data-open-idea] > .text-cover { transition: filter .15s ease; }
+.media[data-open-idea]:hover > img, .media[data-open-idea]:hover > .text-cover { filter: brightness(1.06); }
+.post-body h3[data-open-idea] { cursor: pointer; }
+.post-body h3[data-open-idea]:hover { text-decoration: underline; }
+
 /* ---------- Reactions ---------- */
 .actions { display: flex; align-items: center; gap: 6px; padding: 10px 12px 0; }
 .act {

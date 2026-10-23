@@ -29,6 +29,12 @@ export const api = {
   getUser: id => request("GET", `/api/users/${id}`),
 
   listIdeas: () => request("GET", "/api/ideas"),
+  getIdea: id => request("GET", `/api/ideas/${id}`),
+  saveDetails: (id, body) => request("PUT", `/api/ideas/${id}/details`, body),
+  setStatus: (id, status) => request("PUT", `/api/ideas/${id}/status`, { status }),
+  requestJoin: (id, message) => request("POST", `/api/ideas/${id}/join`, { message }),
+  leaveOrCancelJoin: id => request("DELETE", `/api/ideas/${id}/join`),
+  answerJoin: (id, userId, decision) => request("PUT", `/api/ideas/${id}/join/${userId}`, { decision }),
   createIdea: body => request("POST", "/api/ideas", body),
   updateIdea: (id, body) => request("PUT", `/api/ideas/${id}`, body),
   deleteIdea: id => request("DELETE", `/api/ideas/${id}`),

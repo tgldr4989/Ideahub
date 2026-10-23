@@ -10,20 +10,36 @@ export const byTop = top => top
 
 export const topRanking = () => [...state.ideas].sort(byTop(true));
 
-/** Ideas for the feed after the category filter, search and sort. */
-export function feedIdeas() {
-  const { filter, query, sort } = state;
-  let list = state.ideas.filter(i => {
-    if (filter === "hack" || filter === "proc") return i.type === filter;
-    if (filter === "mine") return i.mine;
-    if (filter.startsWith("#")) return i.tags.some(tag => tag.toLowerCase() === filter.slice(1).toLowerCase());
-    return true;
+/** Ideas matching the menu filter and search (any status). */
+function filteredIdeas() {
+  const { filter, query } = state;
+  const q = query.toLowerCase();
+  return state.ideas.filter(i => {
+    if (filter === "hack" || filter === "proc") { if (i.type !== filter) return false; }
+    else if (filter === "mine") { if (!i.mine) return false; }
+    else if (filter.startsWith("#")) {
+      if (!i.tags.some(tag => tag.toLowerCase() === filter.slice(1).toLowerCase())) return false;
+    }
+    return !q || `${i.title} ${i.desc} ${i.author} ${i.tags.join(" ")}`.toLowerCase().includes(q);
   });
-  if (query) {
-    const q = query.toLowerCase();
-    list = list.filter(i => `${i.title} ${i.desc} ${i.author} ${i.tags.join(" ")}`.toLowerCase().includes(q));
+}
+
+/** Ideas for the feed after the menu filter, search, status tab and sort. */
+export function feedIdeas() {
+  const { statusFilter, sort } = state;
+  return filteredIdeas()
+    .filter(i => statusFilter === "all" || i.status === statusFilter)
+    .sort(byTop(sort === "top"));
+}
+
+/** How many ideas each status tab would show, given the menu filter and search. */
+export function statusCounts() {
+  const counts = { all: 0, new: 0, confirmed: 0, in_progress: 0, done: 0 };
+  for (const i of filteredIdeas()) {
+    counts.all++;
+    counts[i.status]++;
   }
-  return list.sort(byTop(sort === "top"));
+  return counts;
 }
 
 /** Ideas by the person on the profile page, most reacted first. */

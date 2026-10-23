@@ -18,6 +18,8 @@ Settings (environment variables, or a .env file next to this script):
        LDAP_USER_BASE_DN       OU that holds the people allowed in (Coremind staff only)
        IDEAHUB_AUTH            ldap (default) | dev — dev skips AD for local testing and only
                                works when HOST is 127.0.0.1
+       IDEAHUB_ADMINS          comma-separated emails of people who may set any idea's status
+                               (e.g. confirm new ideas)
 """
 import base64
 import hashlib
@@ -141,11 +143,52 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS comments_idea_idx ON comments (idea_id, created_at);
+
+-- Where an idea is: new -> confirmed (approved) -> in_progress -> done.
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new'
+  CHECK (status IN ('new', 'confirmed', 'in_progress', 'done'));
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS status_changed_at TIMESTAMPTZ;
+
+-- Longer write-up the author adds on the idea page.
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS problem   TEXT NOT NULL DEFAULT '';
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS solution  TEXT NOT NULL DEFAULT '';
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS impact    TEXT NOT NULL DEFAULT '';
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS resources TEXT NOT NULL DEFAULT '';
+
+-- Links to documents (specs, slides, repos) attached to an idea.
+CREATE TABLE IF NOT EXISTS idea_links (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  idea_id     BIGINT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  title       TEXT NOT NULL,
+  url         TEXT NOT NULL,
+  position    SMALLINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idea_links_idea_idx ON idea_links (idea_id, position);
+
+-- Requests to join a confirmed idea's team; accepted ones are the team. One per person per idea.
+CREATE TABLE IF NOT EXISTS join_requests (
+  idea_id     BIGINT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  user_id     BIGINT NOT NULL REFERENCES users(id),
+  message     TEXT NOT NULL DEFAULT '',
+  status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  decided_at  TIMESTAMPTZ,
+  PRIMARY KEY (idea_id, user_id)
+);
 """
 
 # Name shown everywhere: the display name if the person set one, else the sign-in name.
 SHOWN_NAME = "COALESCE(NULLIF(u.display_name, ''), u.name)"
 LANGS = {"", "en", "mn"}
+
+STATUSES = ("new", "confirmed", "in_progress", "done")
+# Admins may set any status. An author may only move their own confirmed idea forward.
+AUTHOR_STATUS_MOVES = {"confirmed": ("in_progress",), "in_progress": ("done",)}
+ADMINS = {e.strip().lower() for e in os.environ.get("IDEAHUB_ADMINS", "").split(",") if e.strip()}
+DETAIL_FIELDS = (("problem", "Problem"), ("solution", "Solution"), ("impact", "Impact"), ("resources", "Resources"))
+DETAIL_MAX = 4000
+MAX_LINKS = 10
+LINK_RE = re.compile(r"^https?://\S+$", re.I)
 
 pool = None
 
@@ -385,7 +428,7 @@ def load_profile(cur, profile_id, viewer_id):
 def load_ideas(cur, user_id, idea_id=None):
     query = f"""
       SELECT i.id, i.user_id, i.type, i.title, i.description, i.tags, i.image, i.cover,
-             (extract(epoch FROM i.created_at) * 1000)::bigint AS t, i.updated_at IS NOT NULL AS edited,
+             (extract(epoch FROM i.created_at) * 1000)::bigint AS t, i.updated_at IS NOT NULL AS edited, i.status,
              {SHOWN_NAME} AS author, u.dept AS dept, u.position, u.avatar,
              (SELECT kind FROM reactions r WHERE r.idea_id = i.id AND r.user_id = %s) AS my_reaction
       FROM ideas i JOIN users u ON u.id = i.user_id
@@ -413,11 +456,139 @@ def load_ideas(cur, user_id, idea_id=None):
         "position": r["position"],
         "t": r["t"],
         "edited": r["edited"],
+        "status": r["status"],
         "r": counts.get(r["id"], {}),
         "myReaction": r["my_reaction"],
         "mine": r["user_id"] == user_id,
         "comments": comments.get(r["id"], []),
     } for r in rows]
+
+
+def status_options(current, is_author, is_admin):
+    """Statuses this person may move the idea to, in workflow order."""
+    if is_admin:
+        return [s for s in STATUSES if s != current]
+    return list(AUTHOR_STATUS_MOVES.get(current, ())) if is_author else []
+
+
+def clean_links(links):
+    """[(title, url)] from the details form; only http(s) links, so nothing like javascript: gets in."""
+    if links is None:
+        return []
+    if not isinstance(links, list) or len(links) > MAX_LINKS:
+        raise ApiError(400, f"Add at most {MAX_LINKS} links")
+    cleaned = []
+    for link in links:
+        if not isinstance(link, dict):
+            raise ApiError(400, "Invalid link")
+        url = clean_text(link.get("url"), "Link", 500, required=True)
+        if not LINK_RE.match(url):
+            raise ApiError(400, "Links must start with http:// or https://")
+        cleaned.append((clean_text(link.get("title"), "Link title", 100) or url, url))
+    return cleaned
+
+
+def load_idea_detail(cur, user, idea_id):
+    """Everything the idea page shows: the card fields plus details, links, team and join requests."""
+    ideas = load_ideas(cur, user["id"], idea_id)
+    if not ideas:
+        raise ApiError(404, "That idea no longer exists")
+    idea = ideas[0]
+
+    cur.execute("SELECT problem, solution, impact, resources FROM ideas WHERE id = %s", (idea_id,))
+    idea["details"] = dict(cur.fetchone())
+    cur.execute("SELECT title, url FROM idea_links WHERE idea_id = %s ORDER BY position, id", (idea_id,))
+    idea["links"] = [dict(r) for r in cur.fetchall()]
+
+    cur.execute(f"""
+      SELECT r.user_id, r.message, r.status, (extract(epoch FROM r.created_at) * 1000)::bigint AS t,
+             {SHOWN_NAME} AS name, u.avatar, u.position, u.dept
+      FROM join_requests r JOIN users u ON u.id = r.user_id
+      WHERE r.idea_id = %s ORDER BY r.created_at
+    """, (idea_id,))
+    requests = [{"userId": r["user_id"], "name": r["name"], "avatar": upload_url(r["avatar"]),
+                 "position": r["position"], "dept": r["dept"], "message": r["message"],
+                 "status": r["status"], "t": r["t"]} for r in cur.fetchall()]
+    member_fields = ("userId", "name", "avatar", "position", "dept")
+    idea["team"] = [{k: r[k] for k in member_fields} for r in requests if r["status"] == "accepted"]
+    mine = next((r for r in requests if r["userId"] == user["id"]), None)
+    idea["myRequest"] = {"status": mine["status"], "message": mine["message"]} if mine else None
+    idea["requests"] = requests if idea["mine"] else []   # only the author sees who asked
+    idea["statusOptions"] = status_options(idea["status"], idea["mine"], user["isAdmin"])
+    return idea
+
+
+def idea_action(req, cur, user, idea_id, action, member_id, method):
+    """/api/ideas/<id>/details | status | join[/<userId>] — the idea page's own actions."""
+    cur.execute("SELECT id, user_id, status FROM ideas WHERE id = %s FOR UPDATE", (idea_id,))
+    idea = cur.fetchone()
+    if not idea:
+        raise ApiError(404, "That idea no longer exists")
+    is_author = idea["user_id"] == user["id"]
+
+    if action == "details" and method == "PUT" and member_id is None:
+        if not is_author:
+            raise ApiError(403, "Only the author can edit the details")
+        body = req.json_body()
+        fields = {key: clean_text(body.get(key), label, DETAIL_MAX) for key, label in DETAIL_FIELDS}
+        links = clean_links(body.get("links"))
+        cur.execute("""
+            UPDATE ideas SET problem = %(problem)s, solution = %(solution)s, impact = %(impact)s,
+                             resources = %(resources)s, updated_at = now()
+            WHERE id = %(id)s
+        """, dict(fields, id=idea_id))
+        cur.execute("DELETE FROM idea_links WHERE idea_id = %s", (idea_id,))
+        for position, (title, url) in enumerate(links):
+            cur.execute("INSERT INTO idea_links (idea_id, title, url, position) VALUES (%s, %s, %s, %s)",
+                        (idea_id, title, url, position))
+        return 200, {"idea": load_idea_detail(cur, user, idea_id)}
+
+    if action == "status" and method == "PUT" and member_id is None:
+        status = req.json_body().get("status")
+        if status not in STATUSES:
+            raise ApiError(400, "Unknown status")
+        if status not in status_options(idea["status"], is_author, user["isAdmin"]):
+            raise ApiError(403, "You can't move this idea to that status")
+        cur.execute("UPDATE ideas SET status = %s, status_changed_at = now() WHERE id = %s", (status, idea_id))
+        return 200, {"idea": load_idea_detail(cur, user, idea_id)}
+
+    if action == "join" and member_id is None and method == "POST":
+        if is_author:
+            raise ApiError(400, "You're the author of this idea")
+        if idea["status"] != "confirmed":
+            raise ApiError(400, "Join requests open once the idea is confirmed")
+        message = clean_text(req.json_body().get("message"), "Message", 300)
+        cur.execute("SELECT status FROM join_requests WHERE idea_id = %s AND user_id = %s", (idea_id, user["id"]))
+        existing = cur.fetchone()
+        if existing and existing["status"] != "declined":   # after a decline you may ask again
+            raise ApiError(400, "You already sent a request")
+        cur.execute("""
+            INSERT INTO join_requests (idea_id, user_id, message) VALUES (%s, %s, %s)
+            ON CONFLICT (idea_id, user_id) DO UPDATE
+              SET message = excluded.message, status = 'pending', created_at = now(), decided_at = NULL
+        """, (idea_id, user["id"], message))
+        return 201, {"idea": load_idea_detail(cur, user, idea_id)}
+
+    if action == "join" and member_id is None and method == "DELETE":
+        # cancel your request, or leave the team
+        cur.execute("DELETE FROM join_requests WHERE idea_id = %s AND user_id = %s", (idea_id, user["id"]))
+        return 200, {"idea": load_idea_detail(cur, user, idea_id)}
+
+    if action == "join" and member_id is not None and method == "PUT":
+        if not is_author:
+            raise ApiError(403, "Only the author can answer join requests")
+        decision = req.json_body().get("decision")
+        if decision not in ("accepted", "declined"):
+            raise ApiError(400, "Unknown decision")
+        cur.execute("""
+            UPDATE join_requests SET status = %s, decided_at = now()
+            WHERE idea_id = %s AND user_id = %s RETURNING 1
+        """, (decision, idea_id, member_id))
+        if not cur.fetchone():
+            raise ApiError(404, "That request no longer exists")
+        return 200, {"idea": load_idea_detail(cur, user, idea_id)}
+
+    raise ApiError(404, "Not found")
 
 
 # ---------------------------------------------------------------- routes
@@ -549,9 +720,16 @@ def route(req, cur, method, path):
             raise
         return 201, {"idea": load_ideas(cur, user["id"], cur.fetchone()["id"])[0]}
 
+    m = re.match(r"^/api/ideas/(\d+)/(details|status|join)(?:/(\d+))?$", path)
+    if m:
+        member_id = int(m.group(3)) if m.group(3) else None
+        return idea_action(req, cur, user, int(m.group(1)), m.group(2), member_id, method)
+
     m = re.match(r"^/api/ideas/(\d+)(/reaction)?$", path)
     if m:
         idea_id = int(m.group(1))
+        if not m.group(2) and method == "GET":
+            return 200, {"idea": load_idea_detail(cur, user, idea_id)}
         cur.execute("SELECT id, user_id, image FROM ideas WHERE id = %s", (idea_id,))
         idea = cur.fetchone()
         if not idea:
@@ -721,7 +899,7 @@ class Handler(SimpleHTTPRequestHandler):
         row = cur.fetchone()
         if not row:
             return None
-        return dict(row, avatar=upload_url(row["avatar"]))
+        return dict(row, avatar=upload_url(row["avatar"]), isAdmin=row["email"].lower() in ADMINS)
 
     def set_session_cookie(self, token, max_age):
         self._cookie = f"{SESSION_COOKIE}={token}; Max-Age={max_age}; Path=/; HttpOnly; SameSite=Lax"

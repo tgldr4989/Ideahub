@@ -1,5 +1,5 @@
 // HTML for an idea card: header, cover, reaction bar, text and comments.
-import { COMMENTS_PREVIEW, REACTION, REACTIONS } from "../config.js";
+import { COMMENTS_PREVIEW, REACTION, REACTIONS, STATUS } from "../config.js";
 import { t } from "../i18n/index.js";
 import { topRanking, totalReactions } from "../selectors.js";
 import { state } from "../state.js";
@@ -22,7 +22,7 @@ export function postCardHTML(idea) {
   </article>`;
 }
 
-function headerHTML(i) {
+export function headerHTML(i) {
   const meta = [i.position, i.dept || "Coremind"].filter(Boolean).join(" · ");
   const edited = i.edited ? ` · ${t("edited")}` : "";
   const ownerButtons = i.mine ? `
@@ -39,11 +39,13 @@ function headerHTML(i) {
     </div>`;
 }
 
-function coverHTML(i) {
-  const rank = rankBadgeHTML(i);
-  if (i.img) return `<div class="media">${rank}<img src="${esc(i.img)}" alt="" loading="lazy"></div>`;
+/** Cover image, or the title on a coloured card. On the feed it opens the idea page. */
+export function coverHTML(i, { link = true } = {}) {
+  const open = link ? ` data-open-idea="${i.id}"` : "";
+  const badges = rankBadgeHTML(i) + statusBadgeHTML(i);
+  if (i.img) return `<div class="media"${open}>${badges}<img src="${esc(i.img)}" alt="" loading="lazy"></div>`;
   return `
-    <div class="media">${rank}
+    <div class="media"${open}>${badges}
       <div class="text-cover cover-${+i.cover || 1}">
         <div class="q">“</div><h2>${esc(i.title)}</h2>
         <div class="tagline">${t(i.type === "hack" ? "taglineHack" : "taglineProc")}</div>
@@ -59,7 +61,12 @@ function rankBadgeHTML(i) {
   return `<div class="rank ${pos === 1 ? "gold" : ""}">${["👑", "🥈", "🥉"][pos - 1]} ${t("rank", { n: pos })}</div>`;
 }
 
-function reactionBarHTML(i) {
+export function statusBadgeHTML(i) {
+  const status = STATUS[i.status] || STATUS.new;
+  return `<div class="status-badge s-${status.k}"><span class="dot"></span>${t(status.label)}</div>`;
+}
+
+export function reactionBarHTML(i) {
   const mine = i.myReaction && REACTION[i.myReaction];
   const reactButton = mine
     ? `<button class="act mine" data-react-main="${i.id}"><span class="e">${mine.e}</span><span class="lbl">${t(mine.label)}</span></button>`
@@ -87,18 +94,23 @@ function reactionBarHTML(i) {
 }
 
 function bodyHTML(i) {
-  const title = i.img ? `<h3>${esc(i.title)}</h3>` : "";   // text-only ideas show the title on the cover
+  // text-only ideas show the title on the cover
+  const title = i.img ? `<h3 data-open-idea="${i.id}">${esc(i.title)}</h3>` : "";
   const desc = i.desc ? `<p>${esc(i.desc)}</p>` : "";
-  const tags = i.tags.length
-    ? `<div class="tags">${i.tags.map(tag => `<button data-tag="${esc(tag)}">#${esc(tag)}</button>`).join("")}</div>` : "";
-  return title + desc + tags;
+  return title + desc + tagsHTML(i);
 }
 
-function commentsHTML(i) {
+export function tagsHTML(i) {
+  return i.tags.length
+    ? `<div class="tags">${i.tags.map(tag => `<button data-tag="${esc(tag)}">#${esc(tag)}</button>`).join("")}</div>` : "";
+}
+
+/** Comments and the comment box. `showAll` skips the "View all" collapsing (idea page). */
+export function commentsHTML(i, { showAll = false } = {}) {
   const all = i.comments;
-  const open = state.expanded.has(i.id);
+  const open = showAll || state.expanded.has(i.id);
   const shown = open ? all : all.slice(-COMMENTS_PREVIEW);
-  const toggle = all.length > COMMENTS_PREVIEW
+  const toggle = !showAll && all.length > COMMENTS_PREVIEW
     ? `<button class="view-all" data-expand="${i.id}">${open ? t("showLess") : t("viewAll", { n: all.length })}</button>` : "";
   const me = state.me;
   return `

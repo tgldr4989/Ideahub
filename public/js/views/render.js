@@ -1,21 +1,29 @@
 // Drawing the page from state: the idea list (feed or profile), side panels, header avatar.
+import { STATUSES } from "../config.js";
 import { avatarHTML } from "../components/avatar.js";
+import { ideaPageHTML } from "../components/idea-page.js";
 import { emptyStateHTML, postCardHTML } from "../components/post-card.js";
 import { profileCardHTML } from "../components/profile-card.js";
 import { closePicker } from "../features/reaction-picker.js";
 import { t } from "../i18n/index.js";
-import { feedCounts, feedIdeas, profileIdeas, topRanking, totalReactions } from "../selectors.js";
+import { feedCounts, feedIdeas, profileIdeas, statusCounts, topRanking, totalReactions } from "../selectors.js";
 import { state } from "../state.js";
 import { $, $$, esc } from "../utils.js";
 
-/** Redraw the visible list. With `animate`, cards that changed place slide to their new spot. */
+/** Redraw the current view. With `animate`, cards that changed place slide to their new spot. */
 export function render(animate = false) {
   closePicker();
+  if (state.view === "idea") {
+    $("#ideaPage").innerHTML = state.idea ? ideaPageHTML(state.idea) : "";
+    renderSide();
+    return;
+  }
   const onFeed = state.view === "feed";
   const container = onFeed ? $("#feed") : $("#profileFeed");
   const before = animate ? cardPositions(container) : {};
 
-  if (!onFeed) renderProfileHeader();
+  if (onFeed) renderStatusTabs();
+  else renderProfileHeader();
   const list = onFeed ? feedIdeas() : profileIdeas();
   container.innerHTML = list.length ? list.map(postCardHTML).join("") : emptyStateHTML();
 
@@ -23,12 +31,26 @@ export function render(animate = false) {
   renderSide();
 }
 
-/** Redraw one card in place (after a reaction or comment) without touching the rest. */
+/** Redraw one idea in place (after a reaction or comment) without touching the rest. */
 export function redrawCard(idea, { pop = false } = {}) {
-  const card = document.querySelector(`[data-post="${idea.id}"]`);
-  if (!card) return;
-  card.outerHTML = postCardHTML(idea);
+  if (state.view === "idea") {
+    render();
+  } else {
+    const card = document.querySelector(`[data-post="${idea.id}"]`);
+    if (!card) return;
+    card.outerHTML = postCardHTML(idea);
+  }
   if (pop) document.querySelector(`[data-post="${idea.id}"] .act.mine`)?.classList.add("pop");
+}
+
+/** All / New / Confirmed / In progress / Done, with how many ideas each shows. */
+export function renderStatusTabs() {
+  const counts = statusCounts();
+  const tabs = [{ k: "all", label: "statusAll" }, ...STATUSES];
+  $("#statusTabs").innerHTML = tabs.map(s => `
+    <button class="s-${s.k} ${state.statusFilter === s.k ? "active" : ""}" data-status-filter="${s.k}">
+      ${s.k !== "all" ? `<span class="dot"></span>` : ""}${t(s.label)}<span class="n">${counts[s.k]}</span>
+    </button>`).join("");
 }
 
 export function renderSide() {

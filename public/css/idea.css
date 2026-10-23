@@ -1,0 +1,78 @@
+/* Idea page: write-up, status steps, documents, team and join requests; plus the details dialog. */
+
+.idea-page .media img { aspect-ratio: 16 / 9; }
+.idea-main { padding: 6px 20px 10px; }
+.idea-main h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.25; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.idea-main .lead { margin: 0; font-size: 15px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+
+.idea-section { padding: 18px 20px; border-top: 1px solid var(--line); }
+.idea-section + .comments { padding-top: 0; }
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sec-head h3 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+.idea-section .sec-head:only-child { margin-bottom: 0; }
+.muted { color: var(--ink-3); font-size: 14px; line-height: 1.55; margin: 0; }
+
+.btn-soft.sm, .btn-ghost.sm, .btn-primary.sm { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+
+/* ---------- Write-up ---------- */
+.detail + .detail { margin-top: 16px; }
+.detail h4 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.detail p { margin: 0; font-size: 14px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+
+/* ---------- Documents ---------- */
+.links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.links a {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
+  text-decoration: none; color: inherit; transition: background .15s, border-color .15s;
+}
+.links a:hover { background: #faf9ff; border-color: #c9c2f5; }
+.links .lt { font-weight: 700; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.links .lu { margin-left: auto; flex: none; font-size: 12px; color: var(--ink-3); }
+
+/* ---------- Status steps ---------- */
+.stepper { display: flex; align-items: flex-start; }
+.step { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.step .dot {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800;
+  background: var(--bg); color: var(--ink-3); border: 2px solid var(--line);
+}
+.step .lbl { font-size: 12px; font-weight: 700; color: var(--ink-3); line-height: 1.3; }
+.step.past .dot { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+.step.now .dot { background: #fff; border-color: var(--indigo); color: var(--indigo); box-shadow: 0 0 0 4px rgba(75,47,214,.15); }
+.step.past .lbl, .step.now .lbl { color: var(--ink); }
+.stepper .bar { flex: 1; height: 3px; margin-top: 14px; border-radius: 3px; background: var(--line); }
+.stepper .bar.past { background: var(--indigo); }
+.status-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.status-actions .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s); }
+
+/* ---------- Team and join requests ---------- */
+.team { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 16px; }
+.member { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.member .name, .request .name { font-weight: 700; font-size: 14px; }
+.member .meta, .request .meta { font-size: 12px; color: var(--ink-3); }
+.join-form { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.join-box {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 12px; background: var(--bg); font-size: 14px; font-weight: 600;
+}
+.join-box.ok { background: #e2f9f3; color: #0f7a5f; }
+.requests-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin-bottom: 10px; }
+.requests { display: flex; flex-direction: column; gap: 10px; }
+.request { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.request .who { min-width: 0; flex: 1; }
+.request .msg { margin-top: 4px; font-size: 13px; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.request .btns { flex: none; display: flex; gap: 6px; }
+
+/* ---------- Details dialog ---------- */
+.link-row { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 8px; margin-bottom: 8px; }
+.link-row .del { width: 40px; height: 44px; font-size: 20px; }
+
+@media (max-width: 520px) {
+  .idea-main h1 { font-size: 22px; }
+  .step { width: 62px; }
+  .step .lbl { font-size: 11px; }
+  .link-row { grid-template-columns: 1fr auto; }
+  .link-row [data-link-url] { grid-row: 2; }
+  .request { flex-wrap: wrap; }
+  .request .btns { width: 100%; justify-content: flex-end; }
+}

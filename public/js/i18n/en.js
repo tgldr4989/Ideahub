@@ -39,6 +39,29 @@ export default {
   viewAll: "View all {n} comments", showLess: "Show fewer comments",
   addComment: "Add a comment…", send: "Post", deleteComment: "Delete", confirmDeleteComment: "Delete this comment?",
 
+  // status
+  statusAll: "All", statusNew: "New", statusConfirmed: "Confirmed", statusInProgress: "In progress", statusDone: "Done",
+  changeStatus: "Move to:", statusChanged: "Status updated",
+
+  // idea page
+  commentsTitle: "Comments",
+  details: "Details", addDetails: "Add details", editDetails: "Edit details", detailsSaved: "Details saved",
+  addDetailsHint: "Add the problem, your solution and links to documents so colleagues can understand the idea and join.",
+  noDetails: "The author hasn't added details yet.",
+  dProblem: "Problem", dSolution: "Proposed solution", dImpact: "Expected impact", dResources: "What's needed",
+  dProblemPh: "What problem or pain point does this solve? Who has it?",
+  dSolutionPh: "How would it work? What would we build or change?",
+  dImpactPh: "What gets better — time saved, money, happier customers or colleagues?",
+  dResourcesPh: "People, skills, tools or budget needed",
+  links: "Documents & links", addLink: "Add link", linkTitlePh: "Title, e.g. Spec document",
+  team: "Team", author: "Author",
+  joinTeam: "Request to join the team", joinMessagePh: "Why do you want to join? What can you bring? (optional)",
+  joinSent: "Request sent", requestSent: "Request sent — waiting for {name} to answer",
+  cancelRequest: "Cancel request", requestDeclined: "Your last request was declined. You can send a new one.",
+  youAreMember: "You're on the team", leaveTeam: "Leave team", confirmLeave: "Leave this team?",
+  joinOnlyConfirmed: "Join requests open once the idea is confirmed.",
+  requests: "Join requests", noRequests: "No pending join requests", accept: "Accept", decline: "Decline",
+
   // new / edit idea form
   newTitle: "Share a new idea", editTitle: "Edit idea", kind: "What kind of idea?",
   hackIdea: "Hackathon idea", hackSub: "Something we could build",

@@ -12,6 +12,11 @@ export function setFilter(filter) {
   else render();
 }
 
+export function setStatusFilter(status) {
+  state.statusFilter = status;
+  render();
+}
+
 export function setSort(sort) {
   state.sort = sort;
   $$("#sortTabs button").forEach(b => b.classList.toggle("active", b.dataset.sort === sort));

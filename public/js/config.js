@@ -17,6 +17,24 @@ export const REACTIONS = [
 export const REACTION = Object.fromEntries(REACTIONS.map(r => [r.k, r]));
 export const QUICK_REACTION = "bulb";  // what a plain click on "React" gives
 
+// Idea workflow, in order. Colours are the .s-<key> classes in post.css.
+export const STATUSES = [
+  { k: "new",         label: "statusNew" },
+  { k: "confirmed",   label: "statusConfirmed" },
+  { k: "in_progress", label: "statusInProgress" },
+  { k: "done",        label: "statusDone" },
+];
+export const STATUS = Object.fromEntries(STATUSES.map(s => [s.k, s]));
+
+// Sections of an idea's write-up: [field, label key, icon].
+export const DETAIL_SECTIONS = [
+  ["problem",   "dProblem",   "🧩"],
+  ["solution",  "dSolution",  "💡"],
+  ["impact",    "dImpact",    "📈"],
+  ["resources", "dResources", "🧰"],
+];
+export const MAX_LINKS = 10;
+
 export const AVATAR_COLORS = ["#2f3fe0", "#7a2be2", "#1aa9d6", "#0f9a78", "#4b2fd6", "#d6378a", "#e0812f"];
 
 export const IMAGE_MAX_PX = 1600;      // post images are shrunk to this before upload

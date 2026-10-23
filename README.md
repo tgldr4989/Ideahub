@@ -28,6 +28,7 @@ reach and share `http://<that-machine>:8000`.
 | `IDEAHUB_UPLOADS` | `./uploads` | Folder where uploaded images are saved |
 | `HOST` | `127.0.0.1` | Address to listen on; `0.0.0.0` opens it to the network |
 | `PORT` | `8000` | Port to listen on |
+| `IDEAHUB_ADMINS` | *(none)* | Comma-separated emails of people who may set any idea's status, e.g. confirm new ideas |
 | `IDEAHUB_EMAIL_DOMAIN` | *(none)* | e.g. `coremind.mn` — only emails on that domain can sign in |
 
 The hackathon countdown date is set by `HACKATHON_DEADLINE` near the top of the script in `public/index.html`.
@@ -45,12 +46,13 @@ public/
     api.js                HTTP client: one function per endpoint
     state.js              the single state object
     selectors.js          derived lists (filtered feed, ranking, counts)
-    router.js             #/ feed, #/u/<id> profile
+    router.js             #/ feed, #/u/<id> profile, #/i/<id> idea page
     events.js             page-wide event delegation (data-* attribute → action)
     i18n/                 en.js, mn.js and the t() lookup
-    components/           HTML builders: post card, profile card, avatar
-    views/render.js       draws the feed/profile, side panels, header avatar
-    features/             reactions, comments, ideas, idea form, profile editor, language, sign-in
+    components/           HTML builders: post card, idea page, profile card, avatar
+    views/render.js       draws the feed/profile/idea page, side panels, header avatar
+    features/             reactions, comments, ideas, idea form, idea page (status, details, join
+                          requests), profile editor, language, sign-in
     ui/                   toast, countdown, static text
 tests/smoke_test.py       end-to-end API checks against a temporary database
 ```
@@ -65,7 +67,11 @@ tests/smoke_test.py       end-to-end API checks against a temporary database
 - Employees sign in with name, department and work email; the session lasts 90 days.
 - Each employee can give **one reaction per idea**. Picking another emoji switches it, and clicking the same one
   removes it. The database enforces this with a primary key on `(idea_id, user_id)`.
-- Authors can delete their own ideas.
+- Authors can edit and delete their own ideas.
+- **Status:** every idea starts as *New*. People listed in `IDEAHUB_ADMINS` can set any status (e.g. *Confirmed*);
+  the author can then move their confirmed idea to *In progress* and *Done*.
+- **Idea page** (`#/i/<id>`): the author adds a write-up (problem, solution, impact, what's needed) and links to
+  documents. While an idea is *Confirmed*, colleagues can ask to join its team; the author accepts or declines.
 - The feed refreshes every 15 seconds, so everyone sees new ideas and reactions.
 
 **Backups:** dump the database (`pg_dump ideahub > ideahub.sql`) and copy the uploads folder.

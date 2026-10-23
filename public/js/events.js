@@ -1,14 +1,17 @@
 // Page-wide event delegation: one listener per event type; data-* attributes pick the action.
 import { signOut } from "./app.js";
 import { deleteComment, focusCommentBox, postComment, rememberDraft, toggleComments } from "./features/comments.js";
-import { setFilter, setQuery, setSort } from "./features/feed-controls.js";
+import { setFilter, setQuery, setSort, setStatusFilter } from "./features/feed-controls.js";
 import { closeIdeaForm, openIdeaForm } from "./features/idea-form.js";
+import {
+  answerJoin, cancelJoin, changeStatus, closeDetailsEditor, openDetailsEditor, sendJoinRequest,
+} from "./features/idea-page.js";
 import { deleteIdea } from "./features/ideas.js";
 import { changeLanguage } from "./features/language.js";
 import { closeProfileEditor, openProfileEditor } from "./features/profile-editor.js";
 import { closePicker, isPickerOpen } from "./features/reaction-picker.js";
 import { onReactButton, react } from "./features/reactions.js";
-import { goToFeed, openProfile } from "./router.js";
+import { goToFeed, openIdea, openProfile } from "./router.js";
 import { findIdea } from "./state.js";
 import { $ } from "./utils.js";
 import { render } from "./views/render.js";
@@ -29,6 +32,12 @@ const CLICK_ACTIONS = [
   // own ideas
   ["[data-delete]",        el => deleteIdea(id(el, "delete"))],
   ["[data-edit]",          el => openIdeaForm(findIdea(id(el, "edit")))],
+  // idea page
+  ["[data-open-idea]",     el => openIdea(id(el, "openIdea"))],
+  ["[data-set-status]",    el => changeStatus(el.dataset.setStatus)],
+  ["[data-edit-details]",  () => openDetailsEditor()],
+  ["[data-cancel-join]",   el => cancelJoin(el.dataset.cancelJoin)],
+  ["[data-answer]",        el => answerJoin(id(el, "user"), el.dataset.answer)],
   // profile
   ["[data-profile]",       (el, e) => { e.preventDefault(); openProfile(el.dataset.profile); }],
   ["[data-go-feed]",       () => goToFeed()],
@@ -38,12 +47,14 @@ const CLICK_ACTIONS = [
   // feed controls
   ["[data-tag]",           el => { setFilter(`#${el.dataset.tag}`); scrollToTop(); }],
   ["[data-filter]",        (el, e) => { e.preventDefault(); setFilter(el.dataset.filter); }],
+  ["[data-status-filter]", el => setStatusFilter(el.dataset.statusFilter)],
   ["[data-sort]",          el => { setSort(el.dataset.sort); render(true); }],
   ["[data-sort-link]",     (el, e) => { e.preventDefault(); setSort("top"); setFilter("all"); scrollToTop(); }],
   // dialogs
   ["[data-open-new]",      () => openIdeaForm()],
   ["[data-close]",         () => closeIdeaForm()],
   ["[data-close-profile]", () => closeProfileEditor()],
+  ["[data-close-details]", () => closeDetailsEditor()],
 ];
 
 function onClick(e) {
@@ -59,19 +70,24 @@ function onClick(e) {
   // a click on the dimmed backdrop closes its dialog
   if (target === $("#scrim")) closeIdeaForm();
   else if (target === $("#profileScrim")) closeProfileEditor();
+  else if (target === $("#detailsScrim")) closeDetailsEditor();
 }
 
+// Forms drawn inside cards; the dialogs' forms have their own handlers.
 function onSubmit(e) {
-  const form = e.target.closest("[data-comment-form]");
-  if (!form) return;   // other forms have their own handlers
+  const comment = e.target.closest("[data-comment-form]");
+  const join = e.target.closest("[data-join-form]");
+  if (!comment && !join) return;
   e.preventDefault();
-  postComment(id(form, "commentForm"), form);
+  if (comment) postComment(id(comment, "commentForm"), comment);
+  else sendJoinRequest(join);
 }
 
 function onKeydown(e) {
   if (e.key !== "Escape") return;
   closeIdeaForm();
   closeProfileEditor();
+  closeDetailsEditor();
   closePicker();
 }
 

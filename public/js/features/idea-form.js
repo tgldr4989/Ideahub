@@ -144,8 +144,8 @@ async function saveEdit(body) {
   if (form.newImage) body.image = form.newImage;
   else if (form.imageRemoved) body.image = null;   // otherwise the server keeps the image
   const { idea } = await api.updateIdea(form.editing.id, body);
-  const at = state.ideas.findIndex(i => i.id === idea.id);
-  if (at >= 0) state.ideas[at] = idea;
+  const existing = state.ideas.find(i => i.id === idea.id);
+  if (existing) Object.assign(existing, idea);   // same object as the idea page shows
   closeIdeaForm();
   render();
   toast(t("updated"));

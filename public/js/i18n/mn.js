@@ -39,6 +39,29 @@ export default {
   viewAll: "Бүх {n} сэтгэгдлийг харах", showLess: "Цөөн харуулах",
   addComment: "Сэтгэгдэл бичих…", send: "Илгээх", deleteComment: "Устгах", confirmDeleteComment: "Энэ сэтгэгдлийг устгах уу?",
 
+  // status
+  statusAll: "Бүгд", statusNew: "Шинэ", statusConfirmed: "Дэмжигдсэн", statusInProgress: "Хэрэгжиж байгаа", statusDone: "Хэрэгжсэн",
+  changeStatus: "Төлөв өөрчлөх:", statusChanged: "Төлөв шинэчлэгдлээ",
+
+  // idea page
+  commentsTitle: "Сэтгэгдэл",
+  details: "Дэлгэрэнгүй", addDetails: "Дэлгэрэнгүй нэмэх", editDetails: "Дэлгэрэнгүй засах", detailsSaved: "Дэлгэрэнгүй хадгалагдлаа",
+  addDetailsHint: "Асуудал, шийдэл болон баримт бичгийн холбоосоо нэмбэл хамт олон санааг ойлгож, нэгдэхэд хялбар болно.",
+  noDetails: "Зохиогч дэлгэрэнгүй мэдээлэл нэмээгүй байна.",
+  dProblem: "Асуудал", dSolution: "Санал болгож буй шийдэл", dImpact: "Хүлээгдэж буй үр дүн", dResources: "Шаардлагатай нөөц",
+  dProblemPh: "Ямар асуудлыг шийдэх вэ? Хэнд тулгардаг вэ?",
+  dSolutionPh: "Хэрхэн ажиллах вэ? Юу бүтээх эсвэл өөрчлөх вэ?",
+  dImpactPh: "Юу сайжрах вэ — цаг, мөнгө хэмнэлт, хэрэглэгч эсвэл хамт олны сэтгэл ханамж?",
+  dResourcesPh: "Шаардлагатай хүн, ур чадвар, хэрэгсэл эсвэл төсөв",
+  links: "Баримт бичиг, холбоос", addLink: "Холбоос нэмэх", linkTitlePh: "Нэр, ж.нь: Техникийн баримт бичиг",
+  team: "Баг", author: "Зохиогч",
+  joinTeam: "Багт нэгдэх хүсэлт илгээх", joinMessagePh: "Яагаад нэгдэхийг хүсэж байна вэ? Юугаар хувь нэмэр оруулах вэ? (заавал биш)",
+  joinSent: "Хүсэлт илгээгдлээ", requestSent: "Хүсэлт илгээгдлээ — {name} хариу өгөхийг хүлээж байна",
+  cancelRequest: "Хүсэлт цуцлах", requestDeclined: "Таны өмнөх хүсэлтийг татгалзсан. Дахин илгээх боломжтой.",
+  youAreMember: "Та багийн гишүүн", leaveTeam: "Багаас гарах", confirmLeave: "Энэ багаас гарах уу?",
+  joinOnlyConfirmed: "Санаа дэмжигдсэний дараа багт нэгдэх хүсэлт илгээх боломжтой.",
+  requests: "Нэгдэх хүсэлтүүд", noRequests: "Хүлээгдэж буй хүсэлт алга", accept: "Зөвшөөрөх", decline: "Татгалзах",
+
   // new / edit idea form
   newTitle: "Шинэ санаа хуваалцах", editTitle: "Санаа засах", kind: "Ямар төрлийн санаа вэ?",
   hackIdea: "Хакатоны санаа", hackSub: "Бидний бүтээж болох зүйл",
@@ -88,4 +111,13 @@ export const serverErrors = {
   "Image must be a JPEG, PNG or WebP": "Зураг JPEG, PNG эсвэл WebP байх ёстой",
   "Image must be smaller than 5 MB": "Зураг 5 MB-аас бага байх ёстой",
   "Server error — please try again": "Серверийн алдаа — дахин оролдоно уу",
+  "Only the author can edit the details": "Зөвхөн зохиогч дэлгэрэнгүйг засах боломжтой",
+  "You can't move this idea to that status": "Та санааг энэ төлөвт шилжүүлэх эрхгүй",
+  "You're the author of this idea": "Та энэ санааны зохиогч",
+  "Join requests open once the idea is confirmed": "Санаа дэмжигдсэний дараа хүсэлт илгээх боломжтой",
+  "You already sent a request": "Та аль хэдийн хүсэлт илгээсэн",
+  "Only the author can answer join requests": "Зөвхөн зохиогч хүсэлтэд хариулна",
+  "That request no longer exists": "Энэ хүсэлт байхгүй болсон",
+  "Links must start with http:// or https://": "Холбоос http:// эсвэл https://-ээр эхлэх ёстой",
+  "Add at most 10 links": "Хамгийн ихдээ 10 холбоос нэмнэ",
 };
