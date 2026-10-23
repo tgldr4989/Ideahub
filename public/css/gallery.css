@@ -35,7 +35,7 @@
 .topnav a { position: relative; }
 .topnav .count { margin-left: 0; font-size: 12px; color: var(--ink-3); }
 .topnav .hk-link { color: var(--ink); font-weight: 700; }
-.search { max-width: 280px; background: var(--bg); border-radius: 10px; }
+.search { flex: 0 1 240px; min-width: 170px; max-width: 280px; background: var(--bg); border-radius: 10px; }
 
 /* ---------- Page frame: one column instead of rail + feed + aside ---------- */
 .layout { display: block; max-width: none; padding: 0; margin: 0; }
@@ -101,7 +101,7 @@
 .card-thumb .status-badge { top: 10px; right: 10px; font-size: 11px; padding: 4px 9px; }
 .card-body { padding: 14px 16px 6px; flex: 1; }
 .card-kicker { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-.card-kicker .pill { font-size: 11px; padding: 3px 9px; }
+.card-kicker .pill { font-size: 11px; padding: 3px 9px; margin-left: 0; }
 .card-owner { margin-left: auto; display: inline-flex; gap: 2px; }
 .card-owner .del { width: 28px; height: 28px; }
 .card h3 { margin: 0 0 6px; font-size: 16px; line-height: 1.35; letter-spacing: -.01em; cursor: pointer; overflow-wrap: anywhere; }
@@ -129,7 +129,12 @@
   .search { display: none; }
 }
 @media (max-width: 860px) {
-  .topnav { display: none; }
+  /* menu moves to its own scrollable row under the logo */
+  .topbar-inner { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 0; row-gap: 6px; }
+  .topnav { order: 10; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; display: flex; }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav a.active::after { bottom: 0; }
+  .topnav a { padding: 10px 10px 12px; }
   .hero-inner { grid-template-columns: 1fr; padding: 32px 16px; gap: 24px; }
   .hero h1 { font-size: 24px; }
   .gallery-wrap { grid-template-columns: 1fr; padding: 20px 16px 60px; }
