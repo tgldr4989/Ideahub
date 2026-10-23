@@ -4,6 +4,7 @@ import mn, { serverErrors as mnServerErrors } from "./mn.js";
 
 const LOCALES = { en, mn };
 const STORAGE_KEY = "ideahub.lang";
+const DEFAULT_LANG = "mn";   // Mongolian until someone switches
 
 let current = detectLanguage();
 document.documentElement.lang = current;
@@ -12,8 +13,8 @@ function detectLanguage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved in LOCALES) return saved;
-  } catch { /* storage blocked: fall back to the browser language */ }
-  return (navigator.language || "").toLowerCase().startsWith("mn") ? "mn" : "en";
+  } catch { /* storage blocked: use the default */ }
+  return DEFAULT_LANG;
 }
 
 export const getLang = () => current;

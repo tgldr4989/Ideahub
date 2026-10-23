@@ -24,6 +24,19 @@
 .search svg { flex: none; color: var(--ink-3); }
 .me-btn { flex: none; display: block; border-radius: 50%; }
 
+/* Монгол / English flags, left of the profile icon */
+.lang-switch {
+  flex: none; display: inline-flex; gap: 2px; padding: 3px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.lang-switch button {
+  display: grid; place-items: center; padding: 4px 6px; border-radius: 7px;
+  opacity: .5; filter: grayscale(.5); transition: opacity .15s ease, filter .15s ease, background .15s ease;
+}
+.lang-switch button:hover { opacity: .85; filter: none; }
+.lang-switch button.active { background: #fff; opacity: 1; filter: none; box-shadow: 0 1px 3px rgba(20,20,58,.15); }
+.lang-switch svg { display: block; width: 24px; height: 16px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+
 /* ---------- Columns ---------- */
 .layout {
   max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px;
