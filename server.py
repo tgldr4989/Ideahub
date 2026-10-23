@@ -1,10 +1,16 @@
-"""Coremind Idea Hub server — Python standard library only (3.9+), no installs needed.
+"""Coremind Idea Hub server — PostgreSQL for data, a local folder for images.
 
+Setup: pip install -r requirements.txt, copy .env.example to .env and set PGPASSWORD.
 Run:   python server.py          -> http://localhost:8000
-Env:   HOST                    address to listen on (default 127.0.0.1 = this computer only;
+
+Settings (environment variables, or a .env file next to this script):
+       DATABASE_URL            postgresql://user@host:5432/ideahub
+                               (the database is created on first start if it doesn't exist)
+       PGPASSWORD              PostgreSQL password (kept out of the URL so any character works)
+       IDEAHUB_UPLOADS         folder where uploaded images are saved (default ./uploads)
+       HOST                    address to listen on (default 127.0.0.1 = this computer only;
                                use 0.0.0.0 to let others on the network connect)
        PORT                    port to listen on (default 8000)
-       IDEAHUB_DATA            folder for the SQLite database and uploaded images (default ./data)
        IDEAHUB_EMAIL_DOMAIN    e.g. "coremind.mn" — only emails on this domain may sign in
 """
 import base64
@@ -14,20 +20,39 @@ import os
 import random
 import re
 import secrets
-import sqlite3
-import time
 import traceback
 import uuid
-from contextlib import closing
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+import psycopg2
+import psycopg2.extensions
+import psycopg2.extras
+import psycopg2.pool
+from psycopg2 import sql
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PUBLIC = os.path.join(ROOT, "public")
-DATA = os.environ.get("IDEAHUB_DATA", os.path.join(ROOT, "data"))
-UPLOADS = os.path.join(DATA, "uploads")
-DB_PATH = os.path.join(DATA, "ideahub.db")
+
+
+def load_env_file(path):
+    """Read KEY=VALUE lines from .env; real environment variables win."""
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+
+
+load_env_file(os.path.join(ROOT, ".env"))
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres@localhost:5432/ideahub")
+UPLOADS = os.path.abspath(os.environ.get("IDEAHUB_UPLOADS", os.path.join(ROOT, "uploads")))
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 EMAIL_DOMAIN = os.environ.get("IDEAHUB_EMAIL_DOMAIN", "").strip().lower().lstrip("@")
@@ -44,37 +69,41 @@ UPLOAD_RE = re.compile(r"^[a-f0-9]{32}\.(jpg|png|webp)$")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
-  id          INTEGER PRIMARY KEY,
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   email       TEXT NOT NULL UNIQUE,
   name        TEXT NOT NULL,
   dept        TEXT NOT NULL DEFAULT '',
-  created_at  INTEGER NOT NULL
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash  TEXT PRIMARY KEY,
-  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at  INTEGER NOT NULL
+  user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ideas (
-  id          INTEGER PRIMARY KEY,
-  user_id     INTEGER NOT NULL REFERENCES users(id),
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id     BIGINT NOT NULL REFERENCES users(id),
   type        TEXT NOT NULL CHECK (type IN ('hack', 'proc')),
   title       TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  tags        TEXT NOT NULL DEFAULT '[]',
-  image       TEXT,
-  cover       INTEGER NOT NULL DEFAULT 1,
-  created_at  INTEGER NOT NULL
+  tags        TEXT[] NOT NULL DEFAULT '{}',
+  image       TEXT,                       -- file name inside the uploads folder
+  cover       SMALLINT NOT NULL DEFAULT 1,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- The primary key is what limits each employee to one reaction per idea.
 CREATE TABLE IF NOT EXISTS reactions (
-  idea_id     INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
-  user_id     INTEGER NOT NULL REFERENCES users(id),
-  kind        TEXT NOT NULL,
-  created_at  INTEGER NOT NULL,
+  idea_id     BIGINT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  user_id     BIGINT NOT NULL REFERENCES users(id),
+  kind        TEXT NOT NULL CHECK (kind IN ('bulb', 'fire', 'rocket', 'clap', 'heart')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (idea_id, user_id)
 );
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS ideas_created_idx ON ideas (created_at DESC);
 """
+
+pool = None
 
 
 class ApiError(Exception):
@@ -83,22 +112,35 @@ class ApiError(Exception):
         self.status = status
 
 
-def connect():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+def ensure_database():
+    """Create the database named in DATABASE_URL if it doesn't exist yet."""
+    try:
+        psycopg2.connect(DATABASE_URL).close()
+        return
+    except psycopg2.OperationalError as e:
+        if "does not exist" not in str(e):
+            raise
+    params = psycopg2.extensions.parse_dsn(DATABASE_URL)
+    name = params.get("dbname")
+    conn = psycopg2.connect(**dict(params, dbname="postgres"))
+    conn.autocommit = True
+    with conn.cursor() as cur:
+        cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    conn.close()
+    print(f"Created database {name!r}")
 
 
 def init_db():
+    global pool
     os.makedirs(UPLOADS, exist_ok=True)
-    with closing(connect()) as conn:
-        conn.execute("PRAGMA journal_mode = WAL")
-        conn.executescript(SCHEMA)
-
-
-def now_ms():
-    return int(time.time() * 1000)
+    ensure_database()
+    pool = psycopg2.pool.ThreadedConnectionPool(1, 20, DATABASE_URL)
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(SCHEMA)
+    finally:
+        pool.putconn(conn)
 
 
 def hash_token(token):
@@ -110,7 +152,7 @@ def clean_text(value, field, max_len, required=False):
         value = ""
     if not isinstance(value, str):
         raise ApiError(400, f"{field} must be text")
-    value = value.strip()
+    value = value.strip().replace("\x00", "")
     if required and not value:
         raise ApiError(400, f"{field} is required")
     if len(value) > max_len:
@@ -119,6 +161,7 @@ def clean_text(value, field, max_len, required=False):
 
 
 def save_image(data_url):
+    """Validate an uploaded image and write it to the uploads folder; returns the file name."""
     m = re.match(r"^data:(image/[a-z]+);base64,(.+)$", data_url or "", re.S)
     if not m or m.group(1) not in IMAGE_TYPES:
         raise ApiError(400, "Image must be a JPEG, PNG or WebP")
@@ -139,42 +182,54 @@ def save_image(data_url):
     return name
 
 
-def reaction_counts(conn, idea_id=None):
+def remove_image(name):
+    if name:
+        try:
+            os.remove(os.path.join(UPLOADS, name))
+        except OSError:
+            pass
+
+
+def reaction_counts(cur, idea_id=None):
     """{idea_id: {kind: count}} for one idea or all of them."""
-    sql = "SELECT idea_id, kind, COUNT(*) AS n FROM reactions"
+    query = "SELECT idea_id, kind, COUNT(*) AS n FROM reactions"
     args = ()
     if idea_id is not None:
-        sql += " WHERE idea_id = ?"
+        query += " WHERE idea_id = %s"
         args = (idea_id,)
+    cur.execute(query + " GROUP BY idea_id, kind", args)
     counts = {}
-    for row in conn.execute(sql + " GROUP BY idea_id, kind", args):
+    for row in cur.fetchall():
         counts.setdefault(row["idea_id"], {})[row["kind"]] = row["n"]
     return counts
 
 
-def load_ideas(conn, user_id, idea_id=None):
-    sql = """
-      SELECT i.*, u.name AS author, u.dept AS dept,
-             (SELECT kind FROM reactions r WHERE r.idea_id = i.id AND r.user_id = ?) AS my_reaction
+def load_ideas(cur, user_id, idea_id=None):
+    query = """
+      SELECT i.id, i.user_id, i.type, i.title, i.description, i.tags, i.image, i.cover,
+             (extract(epoch FROM i.created_at) * 1000)::bigint AS t,
+             u.name AS author, u.dept AS dept,
+             (SELECT kind FROM reactions r WHERE r.idea_id = i.id AND r.user_id = %s) AS my_reaction
       FROM ideas i JOIN users u ON u.id = i.user_id
     """
     args = [user_id]
     if idea_id is not None:
-        sql += " WHERE i.id = ?"
+        query += " WHERE i.id = %s"
         args.append(idea_id)
-    rows = conn.execute(sql + " ORDER BY i.created_at DESC", args).fetchall()
-    counts = reaction_counts(conn, idea_id)
+    cur.execute(query + " ORDER BY i.created_at DESC", args)
+    rows = cur.fetchall()
+    counts = reaction_counts(cur, idea_id)
     return [{
         "id": r["id"],
         "type": r["type"],
         "title": r["title"],
         "desc": r["description"],
-        "tags": json.loads(r["tags"]),
+        "tags": r["tags"],
         "img": f"/uploads/{r['image']}" if r["image"] else None,
         "cover": r["cover"],
         "author": r["author"],
         "dept": r["dept"],
-        "t": r["created_at"],
+        "t": r["t"],
         "r": counts.get(r["id"], {}),
         "myReaction": r["my_reaction"],
         "mine": r["user_id"] == user_id,
@@ -183,8 +238,8 @@ def load_ideas(conn, user_id, idea_id=None):
 
 # ---------------------------------------------------------------- routes
 
-def route(req, conn, method, path):
-    user = req.current_user(conn)
+def route(req, cur, method, path):
+    user = req.current_user(cur)
 
     if path == "/api/me" and method == "GET":
         return 200, {"user": user, "emailDomain": EMAIL_DOMAIN}
@@ -198,22 +253,24 @@ def route(req, conn, method, path):
             raise ApiError(400, "Enter a valid email address")
         if EMAIL_DOMAIN and not email.endswith("@" + EMAIL_DOMAIN):
             raise ApiError(403, f"Please use your @{EMAIL_DOMAIN} email")
-        conn.execute("""
-            INSERT INTO users (email, name, dept, created_at) VALUES (?, ?, ?, ?)
-            ON CONFLICT(email) DO UPDATE SET name = excluded.name, dept = excluded.dept
-        """, (email, name, dept, now_ms()))
-        user_id = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()["id"]
+        cur.execute("""
+            INSERT INTO users (email, name, dept) VALUES (%s, %s, %s)
+            ON CONFLICT (email) DO UPDATE SET name = excluded.name, dept = excluded.dept
+            RETURNING id
+        """, (email, name, dept))
+        user_id = cur.fetchone()["id"]
         token = secrets.token_urlsafe(32)
-        conn.execute("DELETE FROM sessions WHERE expires_at < ?", (int(time.time()),))
-        conn.execute("INSERT INTO sessions VALUES (?, ?, ?)",
-                     (hash_token(token), user_id, int(time.time()) + SESSION_SECONDS))
+        cur.execute("DELETE FROM sessions WHERE expires_at < now()")
+        cur.execute("INSERT INTO sessions (token_hash, user_id, expires_at) "
+                    "VALUES (%s, %s, now() + %s * interval '1 second')",
+                    (hash_token(token), user_id, SESSION_SECONDS))
         req.set_session_cookie(token, SESSION_SECONDS)
         return 200, {"user": {"id": user_id, "name": name, "dept": dept, "email": email}}
 
     if path == "/api/logout" and method == "POST":
         token = req.session_token()
         if token:
-            conn.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
+            cur.execute("DELETE FROM sessions WHERE token_hash = %s", (hash_token(token),))
         req.set_session_cookie("", 0)
         return 200, {"ok": True}
 
@@ -221,7 +278,7 @@ def route(req, conn, method, path):
         raise ApiError(401, "Please sign in")
 
     if path == "/api/ideas" and method == "GET":
-        return 200, {"ideas": load_ideas(conn, user["id"])}
+        return 200, {"ideas": load_ideas(cur, user["id"])}
 
     if path == "/api/ideas" and method == "POST":
         body = req.json_body()
@@ -236,41 +293,42 @@ def route(req, conn, method, path):
         tags = [clean_text(t, "Tag", 24).lstrip("#") for t in tags]
         tags = list(dict.fromkeys(t for t in tags if t))
         image = save_image(body["image"]) if body.get("image") else None
-        cur = conn.execute("""
-            INSERT INTO ideas (user_id, type, title, description, tags, image, cover, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user["id"], idea_type, title, desc, json.dumps(tags), image, random.randint(1, 4), now_ms()))
-        return 201, {"idea": load_ideas(conn, user["id"], cur.lastrowid)[0]}
+        try:
+            cur.execute("""
+                INSERT INTO ideas (user_id, type, title, description, tags, image, cover)
+                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+            """, (user["id"], idea_type, title, desc, tags, image, random.randint(1, 4)))
+        except Exception:
+            remove_image(image)   # don't leave an orphan file if the insert fails
+            raise
+        return 201, {"idea": load_ideas(cur, user["id"], cur.fetchone()["id"])[0]}
 
     m = re.match(r"^/api/ideas/(\d+)(/reaction)?$", path)
     if m:
         idea_id = int(m.group(1))
-        idea = conn.execute("SELECT id, user_id, image FROM ideas WHERE id = ?", (idea_id,)).fetchone()
+        cur.execute("SELECT id, user_id, image FROM ideas WHERE id = %s", (idea_id,))
+        idea = cur.fetchone()
         if not idea:
             raise ApiError(404, "That idea no longer exists")
 
         if m.group(2) and method == "PUT":
             kind = req.json_body().get("kind")
             if kind is None:
-                conn.execute("DELETE FROM reactions WHERE idea_id = ? AND user_id = ?", (idea_id, user["id"]))
+                cur.execute("DELETE FROM reactions WHERE idea_id = %s AND user_id = %s", (idea_id, user["id"]))
             elif kind in REACTIONS:
-                conn.execute("""
-                    INSERT INTO reactions (idea_id, user_id, kind, created_at) VALUES (?, ?, ?, ?)
-                    ON CONFLICT(idea_id, user_id) DO UPDATE SET kind = excluded.kind, created_at = excluded.created_at
-                """, (idea_id, user["id"], kind, now_ms()))
+                cur.execute("""
+                    INSERT INTO reactions (idea_id, user_id, kind) VALUES (%s, %s, %s)
+                    ON CONFLICT (idea_id, user_id) DO UPDATE SET kind = excluded.kind, created_at = now()
+                """, (idea_id, user["id"], kind))
             else:
                 raise ApiError(400, "Unknown reaction")
-            return 200, {"r": reaction_counts(conn, idea_id).get(idea_id, {}), "myReaction": kind}
+            return 200, {"r": reaction_counts(cur, idea_id).get(idea_id, {}), "myReaction": kind}
 
         if not m.group(2) and method == "DELETE":
             if idea["user_id"] != user["id"]:
                 raise ApiError(403, "You can only delete your own ideas")
-            conn.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
-            if idea["image"]:
-                try:
-                    os.remove(os.path.join(UPLOADS, idea["image"]))
-                except OSError:
-                    pass
+            cur.execute("DELETE FROM ideas WHERE id = %s", (idea_id,))
+            req.after_commit = lambda: remove_image(idea["image"])
             return 200, {"ok": True}
 
     raise ApiError(404, "Not found")
@@ -326,11 +384,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     def handle_api(self, method, path):
         self._cookie = None
+        self.after_commit = None
         try:
             if method in ("POST", "PUT") and not self.headers.get("Content-Type", "").startswith("application/json"):
                 raise ApiError(415, "Expected JSON")
-            with closing(connect()) as conn, conn:
-                status, body = route(self, conn, method, path)
+            status, body = self.run_in_transaction(method, path)
+            if self.after_commit:
+                self.after_commit()
         except ApiError as e:
             status, body = e.status, {"error": str(e)}
         except Exception:
@@ -345,6 +405,19 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Set-Cookie", self._cookie)
         self.end_headers()
         self.wfile.write(data)
+
+    def run_in_transaction(self, method, path):
+        conn = pool.getconn()
+        broken = False
+        try:
+            # commits on success, rolls back on any exception
+            with conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                return route(self, cur, method, path)
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            broken = True   # e.g. PostgreSQL restarted: drop this connection from the pool
+            raise
+        finally:
+            pool.putconn(conn, close=broken or conn.closed)
 
     def json_body(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -367,14 +440,15 @@ class Handler(SimpleHTTPRequestHandler):
         morsel = jar.get(SESSION_COOKIE)
         return morsel.value if morsel else None
 
-    def current_user(self, conn):
+    def current_user(self, cur):
         token = self.session_token()
         if not token:
             return None
-        row = conn.execute("""
+        cur.execute("""
             SELECT u.id, u.name, u.dept, u.email FROM sessions s JOIN users u ON u.id = s.user_id
-            WHERE s.token_hash = ? AND s.expires_at > ?
-        """, (hash_token(token), int(time.time()))).fetchone()
+            WHERE s.token_hash = %s AND s.expires_at > now()
+        """, (hash_token(token),))
+        row = cur.fetchone()
         return dict(row) if row else None
 
     def set_session_cookie(self, token, max_age):
@@ -382,9 +456,13 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    init_db()
+    try:
+        init_db()
+    except psycopg2.OperationalError as e:
+        raise SystemExit(f"Can't connect to PostgreSQL — check DATABASE_URL in .env\n{e}")
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"Idea Hub running on http://localhost:{PORT}  (data: {DATA})")
+    print(f"Idea Hub running on http://localhost:{PORT}")
+    print(f"Images are saved in {UPLOADS}")
     if EMAIL_DOMAIN:
         print(f"Sign-in limited to @{EMAIL_DOMAIN} emails")
     try:

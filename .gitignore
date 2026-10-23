@@ -1,4 +1,10 @@
-# Database and uploaded images — created when the server runs
+# Local settings (database password)
+.env
+
+# Uploaded images — created when the server runs
+uploads/
+
+# Old SQLite data from the first version
 data/
 
 __pycache__/
