@@ -7,21 +7,23 @@ import { avatarHTML } from "./avatar.js";
 import { commentsHTML, reactionBarHTML } from "./post-card.js";
 
 export function ideaPageHTML(i) {
+  // Devpost-style project page: white header, picture and story in the main column, team first in the sidebar
   return `
   <div data-post="${i.id}">
     ${heroHTML(i)}
     <div class="landing-body">
       <div class="landing-wrap">
-        ${actionStripHTML(i)}
         <div class="landing-grid">
           <div class="landing-main">
+            ${i.img ? `<div class="project-media"><img src="${esc(i.img)}" alt=""></div>` : ""}
+            ${actionStripHTML(i)}
             ${detailsHTML(i)}
             ${documentsHTML(i)}
             ${commentsCardHTML(i)}
           </div>
           <aside class="landing-side">
-            ${progressCardHTML(i)}
             ${teamCardHTML(i)}
+            ${progressCardHTML(i)}
             ${aboutCardHTML(i)}
           </aside>
         </div>
@@ -48,7 +50,7 @@ function heroHTML(i) {
           <button class="hero-back" data-go-feed>${t("back")}</button>
           ${ownerButtons}
         </div>
-        <div class="hero-grid ${i.img ? "" : "no-image"}">
+        <div class="hero-grid no-image">
           <div class="hero-text">
             <div class="hero-badges">
               <span class="hero-pill">${t(i.type === "hack" ? "taglineHack" : "taglineProc")}</span>
@@ -64,7 +66,6 @@ function heroHTML(i) {
               </div>
             </div>
           </div>
-          ${i.img ? `<div class="hero-media"><img src="${esc(i.img)}" alt=""></div>` : ""}
         </div>
       </div>
     </section>`;
@@ -103,15 +104,12 @@ function detailsHTML(i) {
         <button class="btn-primary" data-edit-details>＋ ${t("addDetails")}</button>
       </section>`;
   }
-  return `
-    <div class="detail-grid">
-      ${filled.map(([key, label, icon]) => `
-        <section class="l-card detail-card">
-          <div class="detail-icon">${icon}</div>
-          <h3>${t(label)}</h3>
-          <p>${esc(details[key])}</p>
-        </section>`).join("")}
-    </div>`;
+  const story = filled.map(([key, label, icon]) => `
+      <div class="story-part">
+        <h3><span class="story-icon">${icon}</span>${t(label)}</h3>
+        <p>${esc(details[key])}</p>
+      </div>`).join("");
+  return card(`📄 ${t("details")}`, `<div class="story">${story}</div>`, { cls: "story-card" });
 }
 
 function documentsHTML(i) {
