@@ -63,7 +63,9 @@
 .hero .stats small { color: rgba(255,255,255,.65); }
 
 /* ---------- Filters + gallery ---------- */
-.gallery-wrap { max-width: 1240px; margin: 0 auto; padding: 28px 24px 60px; display: grid; grid-template-columns: 220px 1fr; gap: 32px; }
+.gallery-wrap { max-width: 1240px; margin: 0 auto; padding: 28px 24px 60px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; }
+/* minmax(0, …) and min-width: 0 stop wide content (the status row, long titles) from stretching the page on phones */
+.gallery-wrap > * { min-width: 0; }
 .filters { position: sticky; top: 88px; align-self: start; }
 .filters h4 {
   margin: 0 0 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
@@ -142,7 +144,7 @@
   .topnav a { padding: 10px 10px 12px; }
   .hero-inner { grid-template-columns: 1fr; padding: 32px 16px; gap: 24px; }
   .hero h1 { font-size: 24px; }
-  .gallery-wrap { grid-template-columns: 1fr; padding: 20px 16px 60px; }
+  .gallery-wrap { grid-template-columns: minmax(0, 1fr); padding: 20px 16px 60px; }
   .filters { position: static; }
   .filters .status-tabs { flex-direction: row; overflow-x: auto; margin-bottom: 16px; }
   .filters .status-tabs button { width: auto; white-space: nowrap; }
