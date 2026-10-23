@@ -74,13 +74,10 @@ export function reactionBarHTML(i) {
   const picker = REACTIONS.map(r =>
     `<button class="${i.myReaction === r.k ? "on" : ""}" data-pick="${r.k}" data-id="${i.id}" data-label="${esc(t(r.label))}" aria-label="${esc(t(r.label))}">${r.e}</button>`).join("");
 
-  const reactions = totalReactions(i), comments = i.comments.length;
-  const totals = [
-    reactions ? t("nReactions", { n: reactions }) : "",
-    comments ? `<button data-expand="${i.id}">${t("nComments", { n: comments })}</button>` : "",
-  ].filter(Boolean).join(" · ");
+  const comments = i.comments.length;
+  const commentCount = comments ? `<button data-expand="${i.id}">${t("nComments", { n: comments })}</button>` : "";
 
-  // only the emojis people actually used, most used first
+  // only the emojis people actually used, most used first, right next to the React button
   const used = REACTIONS.filter(r => i.r[r.k] > 0).sort((a, b) => i.r[b.k] - i.r[a.k]);
   const chips = used.length ? `<div class="chips">${used.map(r =>
     `<button class="chip ${i.myReaction === r.k ? "on" : ""}" data-react="${r.k}" data-id="${i.id}" title="${esc(t(r.label))}"><span class="e">${r.e}</span>${i.r[r.k]}</button>`).join("")}</div>` : "";
@@ -88,9 +85,10 @@ export function reactionBarHTML(i) {
   return `
     <div class="actions">
       <div class="react-wrap">${reactButton}<div class="picker">${picker}</div></div>
+      ${chips}
       <button class="act" data-focus-comment="${i.id}">${ICON_COMMENT}<span class="lbl">${t("comment")}</span></button>
-      <span class="totals">${totals}</span>
-    </div>${chips}`;
+      <span class="totals">${commentCount}</span>
+    </div>`;
 }
 
 function bodyHTML(i) {

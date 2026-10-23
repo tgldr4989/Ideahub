@@ -67,7 +67,7 @@
 .post-body h3[data-open-idea]:hover { text-decoration: underline; }
 
 /* ---------- Reactions ---------- */
-.actions { display: flex; align-items: center; gap: 6px; padding: 10px 12px 0; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 10px 12px 0; }
 .act {
   display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 12px;
   font-size: 14px; font-weight: 700; color: var(--ink-2); transition: background .15s ease, transform .12s ease;
@@ -104,7 +104,7 @@
 }
 .picker button:hover::after { opacity: 1; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {
   display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 7px; border-radius: 999px;
   background: var(--bg); border: 1.5px solid transparent; font-size: 13px; font-weight: 700; color: var(--ink-2);

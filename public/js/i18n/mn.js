@@ -32,7 +32,7 @@ export default {
 
   // reactions
   reactBulb: "Гайхалтай", reactFire: "Халуун", reactRocket: "Хэрэгжүүлье", reactClap: "Алга ташилт", reactHeart: "Таалагдлаа",
-  react: "Хариу өгөх", nReactions: n => `${n} хариу үйлдэл`,
+  react: "Хариу өгөх",
 
   // comments
   comment: "Сэтгэгдэл", nComments: n => `${n} сэтгэгдэл`,

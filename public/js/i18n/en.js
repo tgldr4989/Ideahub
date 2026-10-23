@@ -32,7 +32,7 @@ export default {
 
   // reactions
   reactBulb: "Brilliant", reactFire: "Hot", reactRocket: "Ship it", reactClap: "Applause", reactHeart: "Love it",
-  react: "React", nReactions: n => n === 1 ? "1 reaction" : `${n} reactions`,
+  react: "React",
 
   // comments
   comment: "Comment", nComments: n => n === 1 ? "1 comment" : `${n} comments`,
