@@ -4,6 +4,10 @@ export default {
   brandSub: "Хакатон ба Процесс", search: "Санаа, хүн, шошго хайх…", newIdea: "Шинэ санаа", shareIdea: "Санаа хуваалцах",
   navAll: "Бүх санаа", navHack: "Хакатон", navProc: "Процесс", navMine: "Миний санаа",
 
+  // redesign: top nav, challenge banner, filters
+  navHackathon: "🏆 Хакатон 2026", heroKicker: "Coremind 10 жил · Hackathon 2026", heroTeams: "Багууд ба шүүлт →",
+  deadline: "Санаа хүлээн авах хугацаа", filterStatus: "Төлөв", cardComments: n => `${n}`,
+
   // feed
   sortTop: "🔥 Шилдэг", sortNew: "🆕 Шинэ",
   titleAll: "Бүх санаа", titleMine: "Миний санаа", titleHack: "Хакатоны санаа", titleProc: "Процессын санаа",

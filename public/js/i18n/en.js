@@ -4,6 +4,10 @@ export default {
   brandSub: "Hackathon & Process", search: "Search ideas, people, tags…", newIdea: "New idea", shareIdea: "Share an idea",
   navAll: "All ideas", navHack: "Hackathon", navProc: "Process", navMine: "My ideas",
 
+  // redesign: top nav, challenge banner, filters
+  navHackathon: "🏆 Hackathon 2026", heroKicker: "Coremind 10 years · Hackathon 2026", heroTeams: "Teams & judging →",
+  deadline: "Submissions close in", filterStatus: "Status", cardComments: n => `${n}`,
+
   // feed
   sortTop: "🔥 Top", sortNew: "🆕 Newest",
   titleAll: "All ideas", titleMine: "My ideas", titleHack: "Hackathon ideas", titleProc: "Process ideas",

@@ -11,14 +11,34 @@ const ICON_DELETE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
 const ICON_SMILE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 2 3.5 2 3.5-2 3.5-2"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>`;
 const ICON_COMMENT = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.4A8.5 8.5 0 1 1 21 12Z"/></svg>`;
 
+const ICON_HEART = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg>`;
+const ICON_COMMENT_SM = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.4A8.5 8.5 0 1 1 21 12Z"/></svg>`;
+
+/** Gallery card (Devpost style): thumbnail, title, one-line pitch, author and counts. Opens the idea page. */
 export function postCardHTML(idea) {
+  const i = idea;
+  const ownerButtons = i.mine ? `<span class="card-owner">
+      <button class="del edit" data-edit="${i.id}" title="${esc(t("editIdea"))}" aria-label="${esc(t("editIdea"))}">${ICON_EDIT}</button>
+      <button class="del" data-delete="${i.id}" title="${esc(t("deleteIdea"))}" aria-label="${esc(t("deleteIdea"))}">${ICON_DELETE}</button></span>` : "";
+  const thumb = i.img
+    ? `<img src="${esc(i.img)}" alt="" loading="lazy">`
+    : `<div class="card-cover cover-${+i.cover || 1}"><span>${i.type === "hack" ? "⚡" : "⚙️"}</span></div>`;
   return `
-  <article class="post" data-post="${idea.id}">
-    ${headerHTML(idea)}
-    ${coverHTML(idea)}
-    ${reactionBarHTML(idea)}
-    <div class="post-body">${bodyHTML(idea)}</div>
-    ${commentsHTML(idea)}
+  <article class="post card" data-post="${i.id}">
+    <div class="card-thumb" data-open-idea="${i.id}">${thumb}${rankBadgeHTML(i)}${statusBadgeHTML(i)}</div>
+    <div class="card-body">
+      <div class="card-kicker"><span class="pill ${i.type}">${t(i.type === "hack" ? "pillHack" : "pillProc")}</span>${ownerButtons}</div>
+      <h3 data-open-idea="${i.id}">${esc(i.title)}</h3>
+      ${i.desc ? `<p class="card-desc">${esc(i.desc)}</p>` : ""}
+      ${tagsHTML(i)}
+    </div>
+    <div class="card-foot">
+      <span class="card-author link" data-profile="${i.authorId}">${avatarHTML(i.author, i.authorAvatar, "xs")}<span>${esc(i.author)}</span></span>
+      <span class="card-stats" data-open-idea="${i.id}">
+        <span class="${i.myReaction ? "on" : ""}" title="${esc(t("react"))}">${ICON_HEART}${totalReactions(i)}</span>
+        <span title="${esc(t("comment"))}">${ICON_COMMENT_SM}${i.comments.length}</span>
+      </span>
+    </div>
   </article>`;
 }
 
@@ -89,13 +109,6 @@ export function reactionBarHTML(i) {
       <button class="act" data-focus-comment="${i.id}">${ICON_COMMENT}<span class="lbl">${t("comment")}</span></button>
       <span class="totals">${commentCount}</span>
     </div>`;
-}
-
-function bodyHTML(i) {
-  // text-only ideas show the title on the cover
-  const title = i.img ? `<h3 data-open-idea="${i.id}">${esc(i.title)}</h3>` : "";
-  const desc = i.desc ? `<p>${esc(i.desc)}</p>` : "";
-  return title + desc + tagsHTML(i);
 }
 
 export function tagsHTML(i) {

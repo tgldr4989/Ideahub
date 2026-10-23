@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/profile.css">
 <link rel="stylesheet" href="css/forms.css">
 <link rel="stylesheet" href="css/idea.css">
+<link rel="stylesheet" href="css/gallery.css">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -37,6 +38,13 @@
       <img src="assets/coremind-10.webp" alt="Coremind 10 years">
       <div class="brand-name">Idea Hub<small data-i18n="brandSub"></small></div>
     </a>
+    <nav class="nav topnav" id="nav">
+      <a href="#/" class="active" data-filter="all"><span data-i18n="navAll"></span> <span class="count" data-count="all"></span></a>
+      <a href="#/" data-filter="hack"><span data-i18n="navHack"></span> <span class="count" data-count="hack"></span></a>
+      <a href="#/" data-filter="proc"><span data-i18n="navProc"></span> <span class="count" data-count="proc"></span></a>
+      <a href="#/" data-filter="mine"><span data-i18n="navMine"></span> <span class="count" data-count="mine"></span></a>
+      <a href="/hackathon" class="hk-link" data-i18n="navHackathon"></a>
+    </nav>
     <label class="search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" data-i18n-ph="search">
@@ -47,70 +55,63 @@
 </header>
 
 <div class="layout">
-  <aside class="rail">
-    <nav class="nav" id="nav">
-      <a href="#/" class="active" data-filter="all"><span class="ico">🏠</span> <span data-i18n="navAll"></span> <span class="count" data-count="all"></span></a>
-      <a href="#/" data-filter="hack"><span class="ico">⚡</span> <span data-i18n="navHack"></span> <span class="count" data-count="hack"></span></a>
-      <a href="#/" data-filter="proc"><span class="ico">⚙️</span> <span data-i18n="navProc"></span> <span class="count" data-count="proc"></span></a>
-      <a href="#/" data-filter="mine"><span class="ico">💡</span> <span data-i18n="navMine"></span> <span class="count" data-count="mine"></span></a>
-    </nav>
-    <button class="btn-primary" data-open-new><span class="plus">＋</span> <span data-i18n="shareIdea"></span></button>
-  </aside>
-
   <main>
     <div id="feedView">
-      <section class="announce">
-        <div class="announce-icon">📣</div>
-        <div class="announce-text">
-          <span class="announce-badge" data-i18n="annBadge"></span>
-          <h2 data-i18n="annTitle"></h2>
-          <p data-i18n="annText"></p>
+      <!-- Challenge banner, Devpost style -->
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-main">
+            <span class="hero-kicker" data-i18n="heroKicker"></span>
+            <h1 data-i18n="annTitle"></h1>
+            <p data-i18n="annText"></p>
+            <div class="hero-cta">
+              <button class="btn-primary" data-open-new><span class="plus">＋</span> <span data-i18n="shareIdea"></span></button>
+              <a class="btn-outline" href="/hackathon" data-i18n="heroTeams"></a>
+            </div>
+          </div>
+          <aside class="hero-card">
+            <div class="hero-card-label" data-i18n="deadline"></div>
+            <div class="countdown" id="countdown">
+              <div><b>--</b><small data-i18n="days"></small></div>
+              <div><b>--</b><small data-i18n="hours"></small></div>
+              <div><b>--</b><small data-i18n="mins"></small></div>
+            </div>
+            <div class="stats">
+              <div><b id="statIdeas">0</b><small data-i18n="statIdeas"></small></div>
+              <div><b id="statReacts">0</b><small data-i18n="statReacts"></small></div>
+              <div><b id="statPeople">0</b><small data-i18n="statPeople"></small></div>
+            </div>
+          </aside>
         </div>
-        <button class="btn-primary" data-open-new><span class="plus">＋</span> <span data-i18n="shareIdea"></span></button>
       </section>
-      <div class="feed-head">
-        <h1 id="feedTitle"></h1>
-        <div class="tabs" id="sortTabs">
-          <button class="active" data-sort="top" data-i18n="sortTop"></button>
-          <button data-sort="new" data-i18n="sortNew"></button>
-        </div>
+
+      <div class="gallery-wrap">
+        <aside class="filters">
+          <h4 data-i18n="filterStatus"></h4>
+          <div class="status-tabs" id="statusTabs"></div>
+          <h4><span data-i18n="leaderboard"></span> <a href="#/" data-sort-link data-i18n="seeAll"></a></h4>
+          <ol class="leader" id="leader"></ol>
+        </aside>
+        <section class="gallery-main">
+          <div class="feed-head">
+            <h1 id="feedTitle"></h1>
+            <div class="tabs" id="sortTabs">
+              <button class="active" data-sort="top" data-i18n="sortTop"></button>
+              <button data-sort="new" data-i18n="sortNew"></button>
+            </div>
+          </div>
+          <section class="feed gallery" id="feed"></section>
+        </section>
       </div>
-      <div class="status-tabs" id="statusTabs"></div>
-      <section class="feed" id="feed"></section>
     </div>
-    <div id="profileView" hidden>
+
+    <div id="profileView" class="profile-wrap" hidden>
       <button class="back" data-go-feed data-i18n="back"></button>
       <div id="profileCard"></div>
       <h3 class="p-ideas-title" id="profileIdeasTitle"></h3>
-      <section class="feed" id="profileFeed"></section>
+      <section class="feed gallery" id="profileFeed"></section>
     </div>
   </main>
-
-  <aside class="aside">
-    <div class="panel anniv">
-      <div class="logo-chip"><img src="assets/coremind-10.webp" alt="Coremind 10"></div>
-      <h5 data-i18n="annivTitle"></h5>
-      <p data-i18n="annivText"></p>
-      <div class="countdown" id="countdown">
-        <div><b>--</b><small data-i18n="days"></small></div>
-        <div><b>--</b><small data-i18n="hours"></small></div>
-        <div><b>--</b><small data-i18n="mins"></small></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h4><span data-i18n="leaderboard"></span> <a href="#/" data-sort-link data-i18n="seeAll"></a></h4>
-      <ol class="leader" id="leader"></ol>
-    </div>
-
-    <div class="panel">
-      <div class="stats">
-        <div><b id="statIdeas">0</b><small data-i18n="statIdeas"></small></div>
-        <div><b id="statReacts">0</b><small data-i18n="statReacts"></small></div>
-        <div><b id="statPeople">0</b><small data-i18n="statPeople"></small></div>
-      </div>
-    </div>
-  </aside>
 </div>
 
 <!-- Idea landing page (#/i/<id>); replaces the three-column layout while open -->
