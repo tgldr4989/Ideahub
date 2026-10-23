@@ -1,0 +1,37 @@
+/* Profile page: cover, avatar, details, stats and the language switch. */
+
+.back { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--ink-2); margin-bottom: 14px; }
+.back:hover { color: var(--ink); }
+.profile-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 22px; }
+.profile-cover {
+  height: 120px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 140% at 100% 0%, #1ec8e6 0%, transparent 55%), var(--grad-brand);
+}
+.profile-cover::before { content: ""; position: absolute; width: 220px; height: 220px; right: -60px; top: -90px; border-radius: 50%; border: 30px solid rgba(255,255,255,.18); }
+.profile-cover::after { content: ""; position: absolute; width: 120px; height: 120px; left: 30%; bottom: -70px; border-radius: 50%; background: rgba(255,255,255,.12); }
+.profile-main { padding: 0 22px 22px; position: relative; }
+.profile-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: -52px; }
+.profile-top .avatar { box-shadow: 0 8px 24px rgba(20,20,58,.18); }
+.profile-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding-bottom: 6px; }
+.profile-main h2 { margin: 14px 0 2px; font-size: 22px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.p-meta { font-size: 14px; color: var(--ink-2); font-weight: 600; }
+.p-email { font-size: 13px; color: var(--ink-3); margin-top: 2px; overflow-wrap: anywhere; }
+.p-bio { margin: 12px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.p-bio.empty { color: var(--ink-3); font-style: italic; }
+.p-stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; }
+.p-stats div { text-align: center; padding: 12px 6px; }
+.p-stats div + div { border-left: 1px solid var(--line); }
+.p-stats b { display: block; font-size: 22px; letter-spacing: -.02em;
+  background: var(--grad-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.p-stats small { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.lang-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.lang-row > span { font-size: 14px; font-weight: 700; }
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.seg button { padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--ink-3); }
+.seg button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(20,20,58,.12); }
+.p-ideas-title { font-size: 17px; margin: 0 0 14px; letter-spacing: -.01em; }
+
+@media (max-width: 520px) {
+  .profile-main { padding: 0 16px 18px; }
+  .lang-row { flex-wrap: wrap; }
+}

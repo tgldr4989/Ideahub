@@ -1,0 +1,86 @@
+/* Design tokens, reset and shared building blocks (buttons, avatars, toast, empty state). */
+
+:root {
+  --blue: #2f3fe0;
+  --indigo: #4b2fd6;
+  --violet: #7a2be2;
+  --cyan: #1ec8e6;
+  --teal: #3fe0b5;
+  --grad-brand: linear-gradient(135deg, #2f3fe0 0%, #7a2be2 100%);
+  --grad-ring: conic-gradient(from 200deg, #2f3fe0, #7a2be2, #1ec8e6, #3fe0b5, #2f3fe0);
+  --bg: #f4f5fb;
+  --card: #ffffff;
+  --ink: #14143a;
+  --ink-2: #4a4c6e;
+  --ink-3: #8a8ca8;
+  --line: #e7e8f2;
+  --danger: #d6375a;
+  --shadow: 0 1px 2px rgba(20,20,58,.04), 0 8px 24px rgba(20,20,58,.06);
+  --radius: 18px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
+input, textarea { font: inherit; color: inherit; }
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--grad-brand); color: #fff; font-weight: 700; font-size: 14px;
+  padding: 11px 18px; border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(75,47,214,.32);
+  transition: transform .15s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(75,47,214,.38); }
+.btn-primary .plus { font-size: 18px; line-height: 1; }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-soft {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--line); font-weight: 700; font-size: 14px; color: var(--ink);
+}
+.btn-soft:hover { background: #ecedf8; }
+.btn-ghost { padding: 11px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; color: var(--ink-2); }
+.btn-ghost:hover { background: var(--bg); }
+.link { cursor: pointer; }
+.link:hover { text-decoration: underline; }
+
+/* ---------- Avatars ---------- */
+.avatar { flex: none; width: 42px; height: 42px; border-radius: 50%; padding: 2px; background: var(--grad-ring); display: block; }
+.avatar.sm { width: 38px; height: 38px; }
+.avatar.xs { width: 30px; height: 30px; padding: 1.5px; }
+.avatar.xl { width: 104px; height: 104px; padding: 4px; }
+.avatar b, .avatar img {
+  width: 100%; height: 100%; border-radius: 50%; border: 2px solid #fff; display: grid; place-items: center;
+  color: #fff; font-size: 14px; font-weight: 800; object-fit: cover;
+}
+.avatar.xs b { font-size: 11px; border-width: 1.5px; }
+.avatar.xs img { border-width: 1.5px; }
+.avatar.xl b { font-size: 34px; border-width: 4px; }
+.avatar.xl img { border-width: 4px; }
+
+/* ---------- Toast, floating button, empty state ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; z-index: 80;
+  background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  transition: all .25s ease; pointer-events: none; max-width: calc(100vw - 32px);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.fab {
+  display: none; position: fixed; right: 18px; bottom: 18px; z-index: 30;
+  width: 58px; height: 58px; border-radius: 18px; background: var(--grad-brand); color: #fff; font-size: 30px;
+  box-shadow: 0 10px 26px rgba(75,47,214,.45);
+}
+
+.empty { text-align: center; color: var(--ink-3); padding: 48px 16px; font-size: 14px; background: #fff; border: 1.5px dashed var(--line); border-radius: var(--radius); }
+.empty b { display: block; font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+.empty .btn-primary { margin-top: 16px; }

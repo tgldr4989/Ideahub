@@ -32,6 +32,29 @@ reach and share `http://<that-machine>:8000`.
 
 The hackathon countdown date is set by `HACKATHON_DEADLINE` near the top of the script in `public/index.html`.
 
+## Project layout
+
+```
+server.py                 HTTP server, JSON API, PostgreSQL access, sign-in
+public/
+  index.html              page markup only
+  css/                    base (tokens, buttons, avatars) · layout · post · profile · forms
+  js/                     ES modules, loaded by the browser directly (no build step)
+    main.js               entry point: wires everything up
+    app.js                start-up, sign-out, background refresh
+    api.js                HTTP client: one function per endpoint
+    state.js              the single state object
+    selectors.js          derived lists (filtered feed, ranking, counts)
+    router.js             #/ feed, #/u/<id> profile
+    events.js             page-wide event delegation (data-* attribute → action)
+    i18n/                 en.js, mn.js and the t() lookup
+    components/           HTML builders: post card, profile card, avatar
+    views/render.js       draws the feed/profile, side panels, header avatar
+    features/             reactions, comments, ideas, idea form, profile editor, language, sign-in
+    ui/                   toast, countdown, static text
+tests/smoke_test.py       end-to-end API checks against a temporary database
+```
+
 ## How it works
 
 - `server.py` serves `public/` and a small JSON API. Data lives in PostgreSQL in four tables:
