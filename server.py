@@ -123,7 +123,29 @@ CREATE TABLE IF NOT EXISTS reactions (
 );
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS ideas_created_idx ON ideas (created_at DESC);
+
+-- Profile fields the person edits themselves. name/dept above come from sign-in and are
+-- refreshed every login, so a chosen display name lives in its own column.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS position     TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio          TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar       TEXT;           -- file name inside the uploads folder
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lang         TEXT NOT NULL DEFAULT '';
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS updated_at   TIMESTAMPTZ;    -- set when the author edits it
+
+CREATE TABLE IF NOT EXISTS comments (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  idea_id     BIGINT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  user_id     BIGINT NOT NULL REFERENCES users(id),
+  body        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comments_idea_idx ON comments (idea_id, created_at);
 """
+
+# Name shown everywhere: the display name if the person set one, else the sign-in name.
+SHOWN_NAME = "COALESCE(NULLIF(u.display_name, ''), u.name)"
+LANGS = {"", "en", "mn"}
 
 pool = None
 
@@ -274,6 +296,20 @@ def save_image(data_url):
     return name
 
 
+def idea_fields(body):
+    """Validated (type, title, description, tags) from a new or edited idea."""
+    idea_type = body.get("type")
+    if idea_type not in TYPES:
+        raise ApiError(400, "Pick Hackathon idea or Process improvement")
+    title = clean_text(body.get("title"), "Title", 90, required=True)
+    desc = clean_text(body.get("desc"), "Description", 600)
+    tags = body.get("tags") or []
+    if not isinstance(tags, list) or len(tags) > 6:
+        raise ApiError(400, "Use at most 6 tags")
+    tags = [clean_text(t, "Tag", 24).lstrip("#") for t in tags]
+    return idea_type, title, desc, list(dict.fromkeys(t for t in tags if t))
+
+
 def remove_image(name):
     if name:
         try:
@@ -296,11 +332,61 @@ def reaction_counts(cur, idea_id=None):
     return counts
 
 
+def upload_url(name):
+    return f"/uploads/{name}" if name else None
+
+
+def load_comments(cur, user_id, idea_id=None):
+    """{idea_id: [comment, ...]} oldest first, for one idea or all of them."""
+    query = f"""
+      SELECT c.id, c.idea_id, c.user_id, c.body, (extract(epoch FROM c.created_at) * 1000)::bigint AS t,
+             {SHOWN_NAME} AS name, u.avatar
+      FROM comments c JOIN users u ON u.id = c.user_id
+    """
+    args = []
+    if idea_id is not None:
+        query += " WHERE c.idea_id = %s"
+        args.append(idea_id)
+    cur.execute(query + " ORDER BY c.created_at, c.id", args)
+    comments = {}
+    for c in cur.fetchall():
+        comments.setdefault(c["idea_id"], []).append(comment_json(c, user_id))
+    return comments
+
+
+def comment_json(c, user_id):
+    return {"id": c["id"], "body": c["body"], "t": c["t"], "userId": c["user_id"],
+            "name": c["name"], "avatar": upload_url(c["avatar"]), "mine": c["user_id"] == user_id}
+
+
+def load_profile(cur, profile_id, viewer_id):
+    cur.execute(f"""
+      SELECT u.id, u.email, u.name AS sign_in_name, u.dept, u.display_name, u.position, u.bio,
+             u.avatar, u.lang, {SHOWN_NAME} AS name,
+             (SELECT COUNT(*) FROM ideas WHERE user_id = u.id) AS ideas,
+             (SELECT COUNT(*) FROM reactions r JOIN ideas i ON i.id = r.idea_id WHERE i.user_id = u.id) AS reactions,
+             (SELECT COUNT(*) FROM comments WHERE user_id = u.id) AS comments
+      FROM users u WHERE u.id = %s
+    """, (profile_id,))
+    p = cur.fetchone()
+    if not p:
+        raise ApiError(404, "Person not found")
+    profile = {
+        "id": p["id"], "name": p["name"], "email": p["email"], "dept": p["dept"],
+        "position": p["position"], "bio": p["bio"], "avatar": upload_url(p["avatar"]),
+        "stats": {"ideas": p["ideas"], "reactions": p["reactions"], "comments": p["comments"]},
+        "me": p["id"] == viewer_id,
+    }
+    if profile["me"]:
+        profile.update(signInName=p["sign_in_name"], displayName=p["display_name"], lang=p["lang"])
+    return profile
+
+
 def load_ideas(cur, user_id, idea_id=None):
-    query = """
+    query = f"""
       SELECT i.id, i.user_id, i.type, i.title, i.description, i.tags, i.image, i.cover,
-             (extract(epoch FROM i.created_at) * 1000)::bigint AS t,
-             u.name AS author, u.dept AS dept,
+             (extract(epoch FROM i.created_at) * 1000)::bigint AS t, i.updated_at IS NOT NULL AS edited,
+             {SHOWN_NAME} AS author, u.dept AS dept, u.position, u.avatar,
              (SELECT kind FROM reactions r WHERE r.idea_id = i.id AND r.user_id = %s) AS my_reaction
       FROM ideas i JOIN users u ON u.id = i.user_id
     """
@@ -311,6 +397,7 @@ def load_ideas(cur, user_id, idea_id=None):
     cur.execute(query + " ORDER BY i.created_at DESC", args)
     rows = cur.fetchall()
     counts = reaction_counts(cur, idea_id)
+    comments = load_comments(cur, user_id, idea_id)
     return [{
         "id": r["id"],
         "type": r["type"],
@@ -320,11 +407,16 @@ def load_ideas(cur, user_id, idea_id=None):
         "img": f"/uploads/{r['image']}" if r["image"] else None,
         "cover": r["cover"],
         "author": r["author"],
+        "authorId": r["user_id"],
+        "authorAvatar": upload_url(r["avatar"]),
         "dept": r["dept"],
+        "position": r["position"],
         "t": r["t"],
+        "edited": r["edited"],
         "r": counts.get(r["id"], {}),
         "myReaction": r["my_reaction"],
         "mine": r["user_id"] == user_id,
+        "comments": comments.get(r["id"], []),
     } for r in rows]
 
 
@@ -378,18 +470,74 @@ def route(req, cur, method, path):
     if path == "/api/ideas" and method == "GET":
         return 200, {"ideas": load_ideas(cur, user["id"])}
 
+    if path == "/api/me" and method == "PUT":
+        body = req.json_body()
+        display_name = clean_text(body.get("displayName"), "Display name", 60)
+        position = clean_text(body.get("position"), "Position", 60)
+        bio = clean_text(body.get("bio"), "Bio", 160)
+        cur.execute("SELECT avatar, lang FROM users WHERE id = %s", (user["id"],))
+        current = cur.fetchone()
+        lang = body.get("lang", current["lang"])
+        if lang not in LANGS:
+            raise ApiError(400, "Unknown language")
+        old_avatar = current["avatar"]
+        avatar = old_avatar
+        if "avatar" in body:   # data URL = new photo, null = remove photo, absent = keep
+            avatar = save_image(body["avatar"]) if body["avatar"] else None
+        try:
+            cur.execute("""
+                UPDATE users SET display_name = %s, position = %s, bio = %s, lang = %s, avatar = %s
+                WHERE id = %s
+            """, (display_name, position, bio, lang, avatar, user["id"]))
+        except Exception:
+            if avatar != old_avatar:
+                remove_image(avatar)
+            raise
+        if avatar != old_avatar:
+            req.after_commit = lambda: remove_image(old_avatar)
+        return 200, {"user": load_profile(cur, user["id"], user["id"])}
+
+    if path == "/api/me/lang" and method == "PUT":
+        lang = req.json_body().get("lang", "")
+        if lang not in LANGS:
+            raise ApiError(400, "Unknown language")
+        cur.execute("UPDATE users SET lang = %s WHERE id = %s", (lang, user["id"]))
+        return 200, {"lang": lang}
+
+    m = re.match(r"^/api/users/(\d+)$", path)
+    if m and method == "GET":
+        return 200, {"user": load_profile(cur, int(m.group(1)), user["id"])}
+
+    m = re.match(r"^/api/ideas/(\d+)/comments$", path)
+    if m and method == "POST":
+        idea_id = int(m.group(1))
+        body = clean_text(req.json_body().get("body"), "Comment", 500, required=True)
+        cur.execute("SELECT 1 FROM ideas WHERE id = %s", (idea_id,))
+        if not cur.fetchone():
+            raise ApiError(404, "That idea no longer exists")
+        cur.execute(f"""
+            WITH c AS (INSERT INTO comments (idea_id, user_id, body) VALUES (%s, %s, %s)
+                       RETURNING id, idea_id, user_id, body, created_at)
+            SELECT c.id, c.idea_id, c.user_id, c.body, (extract(epoch FROM c.created_at) * 1000)::bigint AS t,
+                   {SHOWN_NAME} AS name, u.avatar
+            FROM c JOIN users u ON u.id = c.user_id
+        """, (idea_id, user["id"], body))
+        return 201, {"comment": comment_json(cur.fetchone(), user["id"])}
+
+    m = re.match(r"^/api/comments/(\d+)$", path)
+    if m and method == "DELETE":
+        cur.execute("SELECT user_id FROM comments WHERE id = %s", (int(m.group(1)),))
+        comment = cur.fetchone()
+        if not comment:
+            raise ApiError(404, "That comment no longer exists")
+        if comment["user_id"] != user["id"]:
+            raise ApiError(403, "You can only delete your own comments")
+        cur.execute("DELETE FROM comments WHERE id = %s", (int(m.group(1)),))
+        return 200, {"ok": True}
+
     if path == "/api/ideas" and method == "POST":
         body = req.json_body()
-        idea_type = body.get("type")
-        if idea_type not in TYPES:
-            raise ApiError(400, "Pick Hackathon idea or Process improvement")
-        title = clean_text(body.get("title"), "Title", 90, required=True)
-        desc = clean_text(body.get("desc"), "Description", 600)
-        tags = body.get("tags") or []
-        if not isinstance(tags, list) or len(tags) > 6:
-            raise ApiError(400, "Use at most 6 tags")
-        tags = [clean_text(t, "Tag", 24).lstrip("#") for t in tags]
-        tags = list(dict.fromkeys(t for t in tags if t))
+        idea_type, title, desc, tags = idea_fields(body)
         image = save_image(body["image"]) if body.get("image") else None
         try:
             cur.execute("""
@@ -421,6 +569,29 @@ def route(req, cur, method, path):
             else:
                 raise ApiError(400, "Unknown reaction")
             return 200, {"r": reaction_counts(cur, idea_id).get(idea_id, {}), "myReaction": kind}
+
+        if not m.group(2) and method == "PUT":
+            if idea["user_id"] != user["id"]:
+                raise ApiError(403, "You can only edit your own ideas")
+            body = req.json_body()
+            idea_type, title, desc, tags = idea_fields(body)
+            old_image = idea["image"]
+            image = old_image
+            if "image" in body:   # data URL = new image, null = remove, absent = keep
+                image = save_image(body["image"]) if body["image"] else None
+            try:
+                cur.execute("""
+                    UPDATE ideas SET type = %s, title = %s, description = %s, tags = %s, image = %s,
+                                     updated_at = now()
+                    WHERE id = %s
+                """, (idea_type, title, desc, tags, image, idea_id))
+            except Exception:
+                if image != old_image:
+                    remove_image(image)
+                raise
+            if image != old_image:
+                req.after_commit = lambda: remove_image(old_image)
+            return 200, {"idea": load_ideas(cur, user["id"], idea_id)[0]}
 
         if not m.group(2) and method == "DELETE":
             if idea["user_id"] != user["id"]:
@@ -542,12 +713,15 @@ class Handler(SimpleHTTPRequestHandler):
         token = self.session_token()
         if not token:
             return None
-        cur.execute("""
-            SELECT u.id, u.name, u.dept, u.email FROM sessions s JOIN users u ON u.id = s.user_id
+        cur.execute(f"""
+            SELECT u.id, {SHOWN_NAME} AS name, u.dept, u.email, u.position, u.avatar, u.lang
+            FROM sessions s JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = %s AND s.expires_at > now()
         """, (hash_token(token),))
         row = cur.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return dict(row, avatar=upload_url(row["avatar"]))
 
     def set_session_cookie(self, token, max_age):
         self._cookie = f"{SESSION_COOKIE}={token}; Max-Age={max_age}; Path=/; HttpOnly; SameSite=Lax"

@@ -138,10 +138,43 @@ try:
     check("list shows shared counts", by_id[idea1]["r"] == {"heart": 1} and by_id[idea1]["myReaction"] == "heart")
     check("list marks own ideas", by_id[idea2]["mine"] and not by_id[idea1]["mine"])
 
+    # comments
+    check("empty comment rejected", call(a, "POST", f"/api/ideas/{idea1}/comments", {"body": "  "})[0] == 400)
+    check("comment on missing idea 404", call(a, "POST", "/api/ideas/9999/comments", {"body": "hi"})[0] == 404)
+    s, r = call(b, "POST", f"/api/ideas/{idea1}/comments", {"body": "Love this <b>idea</b>"})
+    check("add comment", s == 201 and r["comment"]["body"] == "Love this <b>idea</b>" and r["comment"]["mine"], r)
+    comment_id = r["comment"]["id"]
+    call(a, "POST", f"/api/ideas/{idea1}/comments", {"body": "Thanks!"})
+    s, r = call(a, "GET", "/api/ideas")
+    c_list = {i["id"]: i for i in r["ideas"]}[idea1]["comments"]
+    check("comments listed oldest first with names", [c["body"] for c in c_list] == ["Love this <b>idea</b>", "Thanks!"]
+          and c_list[0]["name"] == "bat" and not c_list[0]["mine"], c_list)
+    check("cannot delete others' comment", call(a, "DELETE", f"/api/comments/{comment_id}")[0] == 403)
+    check("delete own comment", call(b, "DELETE", f"/api/comments/{comment_id}")[0] == 200)
+    check("deleted comment gone", len({i["id"]: i for i in call(a, "GET", "/api/ideas")[1]["ideas"]}[idea1]["comments"]) == 1)
+
     check("cannot delete others' idea", call(b, "DELETE", f"/api/ideas/{idea1}")[0] == 403)
     check("react on missing idea 404", call(a, "PUT", "/api/ideas/9999/reaction", {"kind": "fire"})[0] == 404)
     check("delete own idea", call(b, "DELETE", f"/api/ideas/{idea2}")[0] == 200)
     check("image file removed with idea", not os.listdir(uploads))
+
+    # profile
+    me_a = call(a, "GET", "/api/me")[1]["user"]
+    s, r = call(a, "PUT", "/api/me", {"displayName": "Saruul Nyam", "position": "Accountant", "bio": "Numbers person",
+                                       "avatar": "data:image/png;base64," + base64.b64encode(png).decode()})
+    check("edit profile", s == 200 and r["user"]["name"] == "Saruul Nyam" and r["user"]["avatar"].startswith("/uploads/"), r)
+    check("display name shown on ideas", {i["id"]: i for i in call(b, "GET", "/api/ideas")[1]["ideas"]}[idea1]["author"] == "Saruul Nyam")
+    s, r = call(b, "GET", f"/api/users/{me_a['id']}")
+    check("view colleague's profile", s == 200 and r["user"]["position"] == "Accountant" and not r["user"]["me"]
+          and "lang" not in r["user"] and r["user"]["stats"]["ideas"] == 2 and r["user"]["stats"]["reactions"] == 1, r)
+    check("profile too long rejected", call(a, "PUT", "/api/me", {"bio": "x" * 161})[0] == 400)
+    check("language saved", call(a, "PUT", "/api/me/lang", {"lang": "mn"})[0] == 200
+          and call(a, "GET", "/api/me")[1]["user"]["lang"] == "mn")
+    check("unknown language rejected", call(a, "PUT", "/api/me/lang", {"lang": "fr"})[0] == 400)
+    s, r = call(a, "PUT", "/api/me", {"displayName": "", "position": "Accountant", "bio": "", "avatar": None})
+    check("clear display name and photo", r["user"]["name"] == "saruul" and r["user"]["avatar"] is None
+          and r["user"]["lang"] == "mn" and not os.listdir(uploads), (r, os.listdir(uploads)))
+    check("missing profile 404", call(a, "GET", "/api/users/9999")[0] == 404)
 
     for path in ["/server.py", "/../server.py", "/.env", "/%2e%2e/.env", "/assets/", "/uploads/../server.py"]:
         try:
