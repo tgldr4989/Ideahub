@@ -82,18 +82,18 @@ def wait_for_server(proc):
 drop_test_db()
 uploads = tempfile.mkdtemp()
 env = dict(os.environ, PORT=str(PORT), DATABASE_URL=test_url, IDEAHUB_UPLOADS=uploads,
-           IDEAHUB_EMAIL_DOMAIN="coremind.mn")
+           IDEAHUB_AUTH="dev", HOST="127.0.0.1")
 proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], env=env,
                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 try:
     wait_for_server(proc)
     a, b, anon = client(), client(), client()
     check("anon cannot list", call(anon, "GET", "/api/ideas")[0] == 401)
-    check("wrong domain rejected", call(a, "POST", "/api/login", {"name": "X", "email": "x@gmail.com"})[0] == 403)
-    s, r = call(a, "POST", "/api/login", {"name": "Saruul N.", "dept": "Finance", "email": "Saruul@coremind.mn"})
+    check("missing password rejected", call(a, "POST", "/api/login", {"email": "x@coremind.mn"})[0] == 400)
+    s, r = call(a, "POST", "/api/login", {"email": "Saruul@coremind.mn", "password": "x"})
     check("login A", s == 200 and r["user"]["email"] == "saruul@coremind.mn", r)
-    check("me A", call(a, "GET", "/api/me")[1]["user"]["name"] == "Saruul N.")
-    call(b, "POST", "/api/login", {"name": "Bat", "email": "bat@coremind.mn"})
+    check("me A", call(a, "GET", "/api/me")[1]["user"]["name"] == "saruul")
+    call(b, "POST", "/api/login", {"email": "bat", "password": "x"})
 
     check("empty title rejected", call(a, "POST", "/api/ideas", {"type": "hack", "title": "  "})[0] == 400)
     check("bad type rejected", call(a, "POST", "/api/ideas", {"type": "x", "title": "t"})[0] == 400)

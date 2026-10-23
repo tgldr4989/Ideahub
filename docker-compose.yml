@@ -1,0 +1,11 @@
+# Production: PostgreSQL runs natively on the host and is reached through the docker0
+# gateway (172.17.0.1), so it never has to listen on the LAN for this app.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PUBLISH_PORT:-8095}:8000"
+    volumes:
+      - ./uploads:/data/uploads

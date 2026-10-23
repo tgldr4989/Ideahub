@@ -11,7 +11,13 @@ Settings (environment variables, or a .env file next to this script):
        HOST                    address to listen on (default 127.0.0.1 = this computer only;
                                use 0.0.0.0 to let others on the network connect)
        PORT                    port to listen on (default 8000)
-       IDEAHUB_EMAIL_DOMAIN    e.g. "coremind.mn" — only emails on this domain may sign in
+       IDEAHUB_SECURE_COOKIE   1 when served over HTTPS (behind the WAF), so the cookie is Secure
+       LDAP_SERVER             Active Directory host, e.g. dc.example.local (sign-in is refused if unset)
+       LDAP_PORT / LDAP_USE_SSL  636 + true for LDAPS (default), 389 + false for plain LDAP
+       LDAP_UPN_DOMAIN         coremind.mn — "bat" is tried as "bat@coremind.mn"
+       LDAP_USER_BASE_DN       OU that holds the people allowed in (Coremind staff only)
+       IDEAHUB_AUTH            ldap (default) | dev — dev skips AD for local testing and only
+                               works when HOST is 127.0.0.1
 """
 import base64
 import hashlib
@@ -20,16 +26,20 @@ import os
 import random
 import re
 import secrets
+import threading
+import time
 import traceback
 import uuid
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+import ldap3
 import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
 import psycopg2.pool
+from ldap3.utils.conv import escape_filter_chars
 from psycopg2 import sql
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -55,7 +65,20 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres@localhost:5
 UPLOADS = os.path.abspath(os.environ.get("IDEAHUB_UPLOADS", os.path.join(ROOT, "uploads")))
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
-EMAIL_DOMAIN = os.environ.get("IDEAHUB_EMAIL_DOMAIN", "").strip().lower().lstrip("@")
+SECURE_COOKIE = os.environ.get("IDEAHUB_SECURE_COOKIE", "").lower() in {"1", "true", "yes"}
+
+AUTH_MODE = os.environ.get("IDEAHUB_AUTH", "ldap").strip().lower()
+LDAP_SERVER = os.environ.get("LDAP_SERVER", "")
+LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "true").lower() in {"1", "true", "yes"}
+LDAP_PORT = int(os.environ.get("LDAP_PORT") or (636 if LDAP_USE_SSL else 389))
+LDAP_TIMEOUT = int(os.environ.get("LDAP_TIMEOUT", "8"))
+LDAP_UPN_DOMAIN = os.environ.get("LDAP_UPN_DOMAIN", "coremind.mn")
+LDAP_USER_BASE_DN = os.environ.get("LDAP_USER_BASE_DN", "")
+
+# AD locks an account after a few bad passwords, so this form must not become a way to lock
+# colleagues out: after LOGIN_MAX_FAILS failures an account is refused here for LOGIN_WINDOW.
+LOGIN_MAX_FAILS = 5
+LOGIN_WINDOW = 10 * 60
 
 REACTIONS = {"bulb", "fire", "rocket", "clap", "heart"}
 TYPES = {"hack", "proc"}
@@ -64,7 +87,6 @@ MAX_IMAGE = 5 * 1024 * 1024
 IMAGE_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 SESSION_COOKIE = "ideahub_session"
 SESSION_SECONDS = 90 * 24 * 3600
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 UPLOAD_RE = re.compile(r"^[a-f0-9]{32}\.(jpg|png|webp)$")
 
 SCHEMA = """
@@ -145,6 +167,76 @@ def init_db():
 
 def hash_token(token):
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+_fails = {}
+_fails_lock = threading.Lock()
+
+
+def check_throttle(key):
+    now = time.time()
+    with _fails_lock:
+        recent = [t for t in _fails.get(key, []) if now - t < LOGIN_WINDOW]
+        _fails[key] = recent
+        if len(recent) >= LOGIN_MAX_FAILS:
+            raise ApiError(429, "Too many failed attempts — wait 10 minutes and try again")
+
+
+def record_failure(key):
+    with _fails_lock:
+        _fails.setdefault(key, []).append(time.time())
+
+
+def to_upn(username):
+    """`bat` and `bat@coremind.mn` mean the same person."""
+    username = username.strip().lower()
+    return username if "@" in username else f"{username}@{LDAP_UPN_DOMAIN}"
+
+
+def ldap_authenticate(upn, password):
+    """Bind to AD as the person themselves, then check they are in the Coremind OU.
+
+    Same approach as the migration console: AD accepts a UPN bind, so no service account is
+    needed. Returns {email, name, dept} or None for a wrong password or someone outside the OU
+    (both look the same to the caller, so the form never reveals which accounts exist).
+    """
+    server = ldap3.Server(LDAP_SERVER, port=LDAP_PORT, use_ssl=LDAP_USE_SSL,
+                          connect_timeout=LDAP_TIMEOUT)
+    conn = ldap3.Connection(server, user=upn, password=password, receive_timeout=LDAP_TIMEOUT)
+    try:
+        if not conn.bind():
+            return None
+        # Escaped: the UPN is typed by the user, and * or ) would otherwise rewrite the filter.
+        conn.search(LDAP_USER_BASE_DN,
+                    f"(&(objectClass=user)(objectCategory=person)(userPrincipalName={escape_filter_chars(upn)}))",
+                    search_scope=ldap3.SUBTREE,
+                    attributes=["displayName", "mail", "department", "userAccountControl"])
+        if not conn.entries:
+            print(f"ldap: {upn} authenticated but is outside {LDAP_USER_BASE_DN} — refused")
+            return None
+        e = conn.entries[0]
+        if int(str(e.userAccountControl or 0)) & 2:   # ACCOUNTDISABLE
+            return None
+        return {"email": (str(e.mail or "") or upn).lower(),
+                "name": str(e.displayName or "") or upn.split("@")[0],
+                "dept": str(e.department or "")}
+    except ldap3.core.exceptions.LDAPException as exc:
+        # A directory that is down must not look like a wrong password.
+        print(f"ldap: {type(exc).__name__} for {upn}: {exc}")
+        raise ApiError(503, "Can't reach the company directory — try again in a minute")
+    finally:
+        try:
+            conn.unbind()
+        except Exception:
+            pass
+
+
+def authenticate(username, password):
+    upn = to_upn(username)
+    if AUTH_MODE == "dev":
+        # Local testing only (refused at start-up unless HOST is 127.0.0.1): any password works.
+        return {"email": upn, "name": upn.split("@")[0], "dept": ""}
+    return ldap_authenticate(upn, password)
 
 
 def clean_text(value, field, max_len, required=False):
@@ -242,17 +334,23 @@ def route(req, cur, method, path):
     user = req.current_user(cur)
 
     if path == "/api/me" and method == "GET":
-        return 200, {"user": user, "emailDomain": EMAIL_DOMAIN}
+        return 200, {"user": user, "emailDomain": LDAP_UPN_DOMAIN}
 
     if path == "/api/login" and method == "POST":
         body = req.json_body()
-        name = clean_text(body.get("name"), "Name", 60, required=True)
-        dept = clean_text(body.get("dept"), "Department", 60)
-        email = clean_text(body.get("email"), "Email", 120, required=True).lower()
-        if not EMAIL_RE.match(email):
-            raise ApiError(400, "Enter a valid email address")
-        if EMAIL_DOMAIN and not email.endswith("@" + EMAIL_DOMAIN):
-            raise ApiError(403, f"Please use your @{EMAIL_DOMAIN} email")
+        username = clean_text(body.get("email"), "Email", 120, required=True)
+        password = body.get("password") or ""
+        if not isinstance(password, str) or not password:
+            raise ApiError(400, "Enter your password")
+        if not re.match(r"^[^@\s]+(@[^@\s]+\.[^@\s]+)?$", username):
+            raise ApiError(400, "Enter your work email")
+        key = to_upn(username)
+        check_throttle(key)
+        person = authenticate(username, password)
+        if not person:
+            record_failure(key)
+            raise ApiError(401, "Wrong email or password")
+        email, name, dept = person["email"], clean_text(person["name"], "Name", 60), clean_text(person["dept"], "Department", 60)
         cur.execute("""
             INSERT INTO users (email, name, dept) VALUES (%s, %s, %s)
             ON CONFLICT (email) DO UPDATE SET name = excluded.name, dept = excluded.dept
@@ -453,9 +551,15 @@ class Handler(SimpleHTTPRequestHandler):
 
     def set_session_cookie(self, token, max_age):
         self._cookie = f"{SESSION_COOKIE}={token}; Max-Age={max_age}; Path=/; HttpOnly; SameSite=Lax"
+        if SECURE_COOKIE:
+            self._cookie += "; Secure"
 
 
 if __name__ == "__main__":
+    if AUTH_MODE == "dev" and HOST != "127.0.0.1":
+        raise SystemExit("IDEAHUB_AUTH=dev lets anyone sign in as anyone — only allowed with HOST=127.0.0.1")
+    if AUTH_MODE != "dev" and not (LDAP_SERVER and LDAP_USER_BASE_DN):
+        raise SystemExit("Set LDAP_SERVER and LDAP_USER_BASE_DN in .env (or IDEAHUB_AUTH=dev for local testing)")
     try:
         init_db()
     except psycopg2.OperationalError as e:
@@ -463,8 +567,8 @@ if __name__ == "__main__":
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"Idea Hub running on http://localhost:{PORT}")
     print(f"Images are saved in {UPLOADS}")
-    if EMAIL_DOMAIN:
-        print(f"Sign-in limited to @{EMAIL_DOMAIN} emails")
+    print("Sign-in: DEV MODE, no password check" if AUTH_MODE == "dev"
+          else f"Sign-in: Active Directory {LDAP_SERVER}:{LDAP_PORT}, people under {LDAP_USER_BASE_DN}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

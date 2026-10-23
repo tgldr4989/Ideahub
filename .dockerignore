@@ -1,0 +1,7 @@
+.git
+.env
+uploads/
+data/
+tests/
+.claude/
+__pycache__/

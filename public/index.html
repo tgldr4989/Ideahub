@@ -359,9 +359,9 @@
     <img src="assets/coremind-10.webp" alt="Coremind 10 years">
     <h1>Welcome to Idea Hub</h1>
     <p>Share hackathon ideas and ways to improve how we work. React to the ones you love — the best rise to the top.</p>
-    <label>Full name<input class="input" id="sName" name="name" autocomplete="name" maxlength="60" required></label>
-    <label>Department<input class="input" id="sDept" name="dept" maxlength="60" placeholder="e.g. Engineering"></label>
-    <label>Work email<input class="input" id="sEmail" name="email" type="email" autocomplete="email" maxlength="120" required></label>
+    <label>Work email<input class="input" id="sEmail" name="username" autocomplete="username" maxlength="120" required></label>
+    <label>Password<input class="input" id="sPass" name="password" type="password" autocomplete="current-password" required></label>
+    <p style="font-size:12px;margin:0">Use your Coremind computer (Windows) password.</p>
     <div class="err" id="sErr"></div>
     <button class="btn-primary" id="sBtn">Continue</button>
   </form>
@@ -742,7 +742,7 @@ $("#signOut").addEventListener("click", async () => {
 function showSignIn() {
   me = null;
   $("#signin").hidden = false;
-  setTimeout(() => $("#sName").focus(), 50);
+  setTimeout(() => $("#sEmail").focus(), 50);
 }
 function startApp(user) {
   me = user;
@@ -758,8 +758,9 @@ $("#signinForm").addEventListener("submit", async e => {
   $("#sBtn").disabled = true;
   try {
     const { user } = await api("POST", "/api/login", {
-      name: $("#sName").value, dept: $("#sDept").value, email: $("#sEmail").value,
+      email: $("#sEmail").value, password: $("#sPass").value,
     });
+    $("#sPass").value = "";
     startApp(user);
   } catch (err) {
     $("#sErr").textContent = err.message;
