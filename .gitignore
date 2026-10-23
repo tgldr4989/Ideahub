@@ -1,0 +1,7 @@
+# Database and uploaded images — created when the server runs
+data/
+
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

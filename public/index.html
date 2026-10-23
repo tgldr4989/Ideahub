@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coremind Idea Hub</title>
+<link rel="icon" href="assets/coremind-10.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #2f3fe0;
+    --indigo: #4b2fd6;
+    --violet: #7a2be2;
+    --cyan: #1ec8e6;
+    --teal: #3fe0b5;
+    --grad-brand: linear-gradient(135deg, #2f3fe0 0%, #7a2be2 100%);
+    --grad-ring: conic-gradient(from 200deg, #2f3fe0, #7a2be2, #1ec8e6, #3fe0b5, #2f3fe0);
+    --bg: #f4f5fb;
+    --card: #ffffff;
+    --ink: #14143a;
+    --ink-2: #4a4c6e;
+    --ink-3: #8a8ca8;
+    --line: #e7e8f2;
+    --danger: #d6375a;
+    --shadow: 0 1px 2px rgba(20,20,58,.04), 0 8px 24px rgba(20,20,58,.06);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  input, textarea { font: inherit; color: inherit; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255,255,255,.86);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: 1180px; margin: 0 auto; padding: 10px 20px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+  .brand img { height: 44px; display: block; }
+  .brand-name { font-weight: 800; font-size: 18px; letter-spacing: -.02em; line-height: 1.1; }
+  .brand-name small { display: block; font-weight: 600; font-size: 11px; color: var(--ink-3); letter-spacing: .08em; text-transform: uppercase; }
+  .search {
+    flex: 1; max-width: 380px; margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px;
+  }
+  .search input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 14px; }
+  .search svg { flex: none; color: var(--ink-3); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--grad-brand); color: #fff; font-weight: 700; font-size: 14px;
+    padding: 11px 18px; border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(75,47,214,.32);
+    transition: transform .15s ease, box-shadow .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(75,47,214,.38); }
+  .btn-primary .plus { font-size: 18px; line-height: 1; }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* user menu */
+  .me { position: relative; flex: none; }
+  .me-btn { display: block; border-radius: 50%; }
+  .me-menu {
+    position: absolute; right: 0; top: calc(100% + 10px); width: 240px; padding: 14px;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(20,20,58,.16);
+  }
+  .me-menu .name { font-weight: 700; font-size: 14px; }
+  .me-menu .meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; word-break: break-all; }
+  .me-menu button { margin-top: 12px; width: 100%; padding: 9px; border-radius: 10px; font-weight: 700; font-size: 13px; background: var(--bg); }
+  .me-menu button:hover { background: #ecedf8; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px;
+    display: grid; grid-template-columns: 220px minmax(0, 560px) 300px; gap: 32px;
+    justify-content: center;
+  }
+  .rail, .aside { position: sticky; top: 92px; align-self: start; }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav a {
+    display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px;
+    color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: 15px;
+  }
+  .nav a:hover { background: #fff; }
+  .nav a.active { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+  .nav a .ico { width: 22px; text-align: center; font-size: 17px; }
+  .nav .count { margin-left: auto; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .rail .btn-primary { width: 100%; justify-content: center; margin-top: 18px; padding: 13px; }
+
+  /* ---------- Category circles ---------- */
+  .stories {
+    display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 6px;
+    scrollbar-width: none;
+  }
+  .stories::-webkit-scrollbar { display: none; }
+  .story { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 70px; }
+  .story-ring {
+    width: 64px; height: 64px; border-radius: 50%; padding: 3px; background: var(--line);
+    transition: transform .15s ease;
+  }
+  .story.active .story-ring, .story:hover .story-ring { background: var(--grad-ring); }
+  .story:hover .story-ring { transform: scale(1.04); }
+  .story-inner {
+    width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fff;
+    display: grid; place-items: center; font-size: 24px;
+    background: linear-gradient(135deg, #eef0ff, #e8fbf7);
+  }
+  .story span { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .story.active span { color: var(--ink); }
+
+  /* ---------- Sort tabs ---------- */
+  .feed-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 16px; }
+  .feed-head h1 { font-size: 20px; margin: 0; letter-spacing: -.02em; }
+  .tabs { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+  .tabs button { padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--ink-3); }
+  .tabs button.active { background: var(--ink); color: #fff; }
+
+  /* ---------- Idea post ---------- */
+  .feed { display: flex; flex-direction: column; gap: 22px; }
+  .post {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    border: 1px solid var(--line); overflow: hidden;
+  }
+  .post-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .avatar { flex: none; width: 42px; height: 42px; border-radius: 50%; padding: 2px; background: var(--grad-ring); }
+  .avatar.sm { width: 38px; height: 38px; }
+  .avatar b {
+    width: 100%; height: 100%; border-radius: 50%; border: 2px solid #fff;
+    display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800;
+  }
+  .who { min-width: 0; }
+  .who .name { font-weight: 700; font-size: 14px; }
+  .who .meta { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .pill {
+    margin-left: auto; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    padding: 6px 10px; border-radius: 999px;
+  }
+  .pill.hack { background: #efeaff; color: var(--violet); }
+  .pill.proc { background: #e2f9f3; color: #0f9a78; }
+  .del { flex: none; width: 32px; height: 32px; border-radius: 10px; color: var(--ink-3); display: grid; place-items: center; }
+  .del:hover { background: #fdebef; color: var(--danger); }
+
+  .media { position: relative; }
+  .media img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--bg); }
+  .text-cover {
+    position: relative; aspect-ratio: 16 / 10; padding: 34px 32px;
+    display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+    color: #fff;
+  }
+  .text-cover::before, .text-cover::after { content: ""; position: absolute; border-radius: 50%; opacity: .35; }
+  .text-cover::before { width: 280px; height: 280px; right: -90px; top: -110px; border: 36px solid rgba(255,255,255,.4); }
+  .text-cover::after  { width: 160px; height: 160px; left: -60px; bottom: -70px; background: rgba(255,255,255,.25); }
+  .text-cover .q { font-size: 64px; line-height: .6; font-weight: 800; opacity: .45; margin-bottom: 14px; }
+  .text-cover h2 { position: relative; z-index: 1; margin: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.02em; font-weight: 800; text-wrap: balance; overflow-wrap: anywhere; }
+  .text-cover .tagline { position: relative; z-index: 1; margin-top: 16px; font-size: 13px; font-weight: 600; opacity: .85; }
+  .cover-1 { background: linear-gradient(140deg, #2f3fe0, #7a2be2); }
+  .cover-2 { background: linear-gradient(140deg, #1aa9d6, #3fe0b5); }
+  .cover-3 { background: linear-gradient(140deg, #4b2fd6, #1ec8e6); }
+  .cover-4 { background: linear-gradient(140deg, #14143a, #4b2fd6); }
+
+  .rank {
+    position: absolute; z-index: 2; top: 14px; left: 14px;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.95); color: var(--ink); font-weight: 800; font-size: 12px;
+    padding: 6px 10px 6px 8px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  }
+  .rank.gold { background: linear-gradient(135deg, #ffe58a, #ffc83d); }
+
+  /* reactions */
+  .react-bar { display: flex; align-items: center; gap: 6px; padding: 12px 14px 4px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px;
+    background: var(--bg); border: 1.5px solid transparent; font-size: 13px; font-weight: 700; color: var(--ink-2);
+    transition: transform .12s ease, background .15s ease, border-color .15s ease;
+  }
+  .chip .e { font-size: 16px; line-height: 1; transition: transform .2s cubic-bezier(.3,1.8,.5,1); }
+  .chip:hover { background: #ecedf8; }
+  .chip:active { transform: scale(.94); }
+  .chip.on { background: #f1edff; border-color: #b9a6ff; color: var(--indigo); }
+  .chip.on .e { transform: scale(1.18); }
+  .chip.pop .e { animation: pop .45s ease; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.6) rotate(-8deg)} 100%{transform:scale(1.18)} }
+  .total { margin-left: auto; font-size: 13px; color: var(--ink-3); font-weight: 600; }
+  .total strong { color: var(--ink); }
+
+  .post-body { padding: 8px 16px 18px; }
+  .post-body:empty { padding: 0 0 10px; }
+  .post-body h3 { margin: 4px 0 6px; font-size: 17px; letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .post-body p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .tags button { font-size: 12px; font-weight: 700; color: var(--blue); }
+  .tags button:hover { text-decoration: underline; }
+
+  /* ---------- Right aside ---------- */
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 18px; }
+  .panel h4 { margin: 0 0 14px; font-size: 14px; letter-spacing: -.01em; display: flex; align-items: center; justify-content: space-between; }
+  .panel h4 a { font-size: 12px; color: var(--blue); text-decoration: none; font-weight: 700; }
+
+  .anniv {
+    position: relative; overflow: hidden; padding: 20px; color: #fff;
+    background: radial-gradient(120% 120% at 100% 0%, #1ec8e6 0%, transparent 55%), var(--grad-brand);
+    border: 0;
+  }
+  .anniv .logo-chip { background: #fff; border-radius: 14px; padding: 10px 12px; display: inline-block; margin-bottom: 14px; }
+  .anniv .logo-chip img { height: 54px; display: block; }
+  .anniv h5 { margin: 0; font-size: 18px; line-height: 1.3; letter-spacing: -.01em; }
+  .anniv p { margin: 6px 0 16px; font-size: 13px; opacity: .85; line-height: 1.5; }
+  .countdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .countdown div { background: rgba(255,255,255,.16); border-radius: 12px; padding: 10px 6px; text-align: center; }
+  .countdown b { display: block; font-size: 20px; }
+  .countdown small { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
+
+  .leader { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .leader li { display: flex; align-items: center; gap: 10px; }
+  .leader .n {
+    flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+    font-size: 12px; font-weight: 800; background: var(--bg); color: var(--ink-2);
+  }
+  .leader li:first-child .n { background: linear-gradient(135deg, #ffe58a, #ffc83d); color: #6b4a00; }
+  .leader .t { font-size: 13px; font-weight: 600; line-height: 1.35; min-width: 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .leader .c { margin-left: auto; flex: none; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+  .leader .none { font-size: 13px; color: var(--ink-3); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .stats b { display: block; font-size: 20px; letter-spacing: -.02em;
+    background: var(--grad-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stats small { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+
+  /* ---------- Modal ---------- */
+  .scrim {
+    position: fixed; inset: 0; z-index: 50; background: rgba(20,20,58,.45); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .scrim.open { display: flex; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0 } }
+  .modal {
+    width: 100%; max-width: 560px; max-height: calc(100vh - 32px); overflow: auto;
+    background: #fff; border-radius: 22px; box-shadow: 0 30px 80px rgba(20,20,58,.35);
+    animation: rise .22s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes rise { from { transform: translateY(16px) scale(.98); opacity: 0 } }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+  .x { width: 34px; height: 34px; border-radius: 10px; font-size: 20px; color: var(--ink-3); }
+  .x:hover { background: var(--bg); }
+  .modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .field label em { font-style: normal; color: var(--ink-3); font-weight: 500; }
+  .type-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .type-opt {
+    text-align: left; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .type-opt .big { font-size: 22px; }
+  .type-opt b { display: block; font-size: 14px; }
+  .type-opt small { color: var(--ink-3); font-size: 12px; }
+  .type-opt.on { border-color: var(--indigo); background: #f6f3ff; box-shadow: 0 0 0 3px rgba(75,47,214,.12); }
+  .input, .textarea {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: 0;
+    background: #fff; transition: border-color .15s, box-shadow .15s;
+  }
+  .input:focus, .textarea:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(75,47,214,.12); }
+  .input.title { font-size: 16px; font-weight: 700; }
+  .textarea { min-height: 110px; resize: vertical; line-height: 1.55; }
+  .counter { text-align: right; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+  .drop {
+    border: 1.5px dashed #c9cbe0; border-radius: 14px; padding: 18px; text-align: center; color: var(--ink-3); font-size: 13px;
+    cursor: pointer; transition: border-color .15s, background .15s; position: relative; overflow: hidden;
+  }
+  .drop:hover { border-color: var(--indigo); background: #faf9ff; }
+  .drop b { color: var(--indigo); }
+  .drop img { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; }
+  .drop .rm { position: absolute; top: 26px; right: 26px; background: rgba(0,0,0,.6); color: #fff; border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+  .hint { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+  .err { color: var(--danger); font-size: 13px; font-weight: 600; }
+  .err:empty { display: none; }
+  .modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 22px 20px; border-top: 1px solid var(--line); }
+  .modal-foot .err { margin-right: auto; }
+  .btn-ghost { padding: 11px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; color: var(--ink-2); }
+  .btn-ghost:hover { background: var(--bg); }
+
+  /* ---------- Sign-in ---------- */
+  .signin {
+    position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: radial-gradient(80% 80% at 100% 0%, rgba(30,200,230,.35), transparent 60%),
+                radial-gradient(70% 70% at 0% 100%, rgba(122,43,226,.35), transparent 60%), var(--bg);
+    overflow: auto;
+  }
+  .signin-card {
+    width: 100%; max-width: 420px; background: #fff; border-radius: 24px; padding: 32px 28px;
+    box-shadow: 0 30px 80px rgba(20,20,58,.18); display: flex; flex-direction: column; gap: 14px;
+  }
+  .signin-card img { height: 96px; align-self: center; }
+  .signin-card h1 { margin: 6px 0 0; font-size: 22px; text-align: center; letter-spacing: -.02em; }
+  .signin-card p { margin: 0 0 6px; text-align: center; color: var(--ink-2); font-size: 14px; line-height: 1.55; }
+  .signin-card label { font-size: 13px; font-weight: 700; display: flex; flex-direction: column; gap: 6px; }
+  .signin-card .btn-primary { justify-content: center; padding: 13px; margin-top: 4px; }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; z-index: 80;
+    background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    transition: all .25s ease; pointer-events: none; max-width: calc(100vw - 32px);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .fab {
+    display: none; position: fixed; right: 18px; bottom: 18px; z-index: 30;
+    width: 58px; height: 58px; border-radius: 18px; background: var(--grad-brand); color: #fff; font-size: 30px;
+    box-shadow: 0 10px 26px rgba(75,47,214,.45);
+  }
+
+  .empty { text-align: center; color: var(--ink-3); padding: 48px 16px; font-size: 14px; background: #fff; border: 1.5px dashed var(--line); border-radius: var(--radius); }
+  .empty b { display: block; font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+  .empty .btn-primary { margin-top: 16px; }
+
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: minmax(0, 560px) 300px; }
+    .rail { display: none; }
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 560px); padding: 16px 16px 100px; }
+    .aside { display: none; }
+    .topbar .btn-primary { display: none; }
+    .fab { display: grid; place-items: center; }
+    .brand-name { display: none; }
+  }
+  @media (max-width: 520px) {
+    .topbar-inner { padding: 10px 16px; gap: 12px; }
+    .brand img { height: 36px; }
+    .text-cover h2 { font-size: 22px; }
+    .text-cover { padding: 26px 22px; }
+    .type-switch { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sign-in -->
+<div class="signin" id="signin" hidden>
+  <form class="signin-card" id="signinForm" autocomplete="on">
+    <img src="assets/coremind-10.webp" alt="Coremind 10 years">
+    <h1>Welcome to Idea Hub</h1>
+    <p>Share hackathon ideas and ways to improve how we work. React to the ones you love — the best rise to the top.</p>
+    <label>Full name<input class="input" id="sName" name="name" autocomplete="name" maxlength="60" required></label>
+    <label>Department<input class="input" id="sDept" name="dept" maxlength="60" placeholder="e.g. Engineering"></label>
+    <label>Work email<input class="input" id="sEmail" name="email" type="email" autocomplete="email" maxlength="120" required></label>
+    <div class="err" id="sErr"></div>
+    <button class="btn-primary" id="sBtn">Continue</button>
+  </form>
+</div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#" data-filter="all">
+      <img src="assets/coremind-10.webp" alt="Coremind 10 years">
+      <div class="brand-name">Idea Hub<small>Hackathon &amp; Process</small></div>
+    </a>
+    <label class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search ideas, people, tags…">
+    </label>
+    <button class="btn-primary" data-open-new><span class="plus">＋</span> New idea</button>
+    <div class="me">
+      <button class="me-btn" id="meBtn" aria-label="Your account"></button>
+      <div class="me-menu" id="meMenu" hidden>
+        <div class="name" id="meName"></div>
+        <div class="meta" id="meMeta"></div>
+        <button id="signOut">Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="rail">
+    <nav class="nav" id="nav">
+      <a href="#" class="active" data-filter="all"><span class="ico">🏠</span> All ideas <span class="count" data-count="all"></span></a>
+      <a href="#" data-filter="hack"><span class="ico">⚡</span> Hackathon <span class="count" data-count="hack"></span></a>
+      <a href="#" data-filter="proc"><span class="ico">⚙️</span> Process <span class="count" data-count="proc"></span></a>
+      <a href="#" data-filter="mine"><span class="ico">👤</span> My ideas <span class="count" data-count="mine"></span></a>
+    </nav>
+    <button class="btn-primary" data-open-new><span class="plus">＋</span> Share an idea</button>
+  </aside>
+
+  <main>
+    <div class="stories" id="stories"></div>
+    <div class="feed-head">
+      <h1 id="feedTitle">All ideas</h1>
+      <div class="tabs" id="sortTabs">
+        <button class="active" data-sort="top">🔥 Top</button>
+        <button data-sort="new">🆕 Newest</button>
+      </div>
+    </div>
+    <section class="feed" id="feed"></section>
+  </main>
+
+  <aside class="aside">
+    <div class="panel anniv">
+      <div class="logo-chip"><img src="assets/coremind-10.webp" alt="Coremind 10"></div>
+      <h5>10 years. 10× ideas.</h5>
+      <p>Anniversary Hackathon submissions close soon — post your idea and rally reactions.</p>
+      <div class="countdown" id="countdown">
+        <div><b>--</b><small>days</small></div>
+        <div><b>--</b><small>hours</small></div>
+        <div><b>--</b><small>min</small></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h4>🏆 Leaderboard <a href="#" data-sort-link>See all</a></h4>
+      <ol class="leader" id="leader"></ol>
+    </div>
+
+    <div class="panel">
+      <div class="stats">
+        <div><b id="statIdeas">0</b><small>Ideas</small></div>
+        <div><b id="statReacts">0</b><small>Reactions</small></div>
+        <div><b id="statPeople">0</b><small>Contributors</small></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<button class="fab" data-open-new aria-label="New idea">＋</button>
+
+<!-- New idea modal -->
+<div class="scrim" id="scrim">
+  <form class="modal" id="form" autocomplete="off">
+    <div class="modal-head">
+      <h2>Share a new idea</h2>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>What kind of idea?</label>
+        <div class="type-switch">
+          <button type="button" class="type-opt on" data-type="hack">
+            <span class="big">⚡</span><span><b>Hackathon idea</b><small>Something we could build</small></span>
+          </button>
+          <button type="button" class="type-opt" data-type="proc">
+            <span class="big">⚙️</span><span><b>Process improvement</b><small>Make how we work better</small></span>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fTitle">Title</label>
+        <input id="fTitle" class="input title" maxlength="90" placeholder="e.g. Slack bot that turns receipts into expense reports">
+        <div class="counter"><span id="tCount">0</span>/90</div>
+      </div>
+      <div class="field">
+        <label for="fDesc">Describe it <em>(optional)</em></label>
+        <textarea id="fDesc" class="textarea" maxlength="600" placeholder="What problem does it solve? Who benefits? How might it work?"></textarea>
+      </div>
+      <div class="field">
+        <label for="fTags">Tags <em>(optional, comma separated)</em></label>
+        <input id="fTags" class="input" placeholder="AI, Automation, Finance">
+      </div>
+      <div class="field">
+        <label>Image <em>(optional)</em></label>
+        <div class="drop" id="drop"></div>
+        <input type="file" id="fImg" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+        <div class="hint">No image? No problem — your title becomes a text card.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="err" id="fErr"></div>
+      <button type="button" class="btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn-primary" id="submitBtn" disabled>Post idea</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Hackathon submission deadline shown in the countdown — set the real date/time here.
+const HACKATHON_DEADLINE = "2026-11-20T18:00:00+08:00";
+const POLL_MS = 15000;
+
+const REACTIONS = [
+  { k: "bulb",   e: "💡", label: "Brilliant" },
+  { k: "fire",   e: "🔥", label: "Hot" },
+  { k: "rocket", e: "🚀", label: "Ship it" },
+  { k: "clap",   e: "👏", label: "Applause" },
+  { k: "heart",  e: "❤️", label: "Love it" },
+];
+const CATS = [
+  { k: "all",  e: "✨", label: "All" },
+  { k: "hack", e: "⚡", label: "Hackathon" },
+  { k: "proc", e: "⚙️", label: "Process" },
+  { k: "#AI", e: "🤖", label: "AI" },
+  { k: "#Automation", e: "🔁", label: "Automation" },
+  { k: "#Culture", e: "🌱", label: "Culture" },
+  { k: "#Finance", e: "💳", label: "Finance" },
+  { k: "#Office", e: "🏢", label: "Office" },
+];
+const AV_COLORS = ["#2f3fe0","#7a2be2","#1aa9d6","#0f9a78","#4b2fd6","#d6378a","#e0812f"];
+const DROP_EMPTY = `🖼️ &nbsp;<b>Upload an image</b> or drag it here`;
+
+let me = null, ideas = [], snapshot = "";
+let filter = "all", sort = "top", query = "";
+
+const $ = s => document.querySelector(s);
+const total = i => Object.values(i.r).reduce((a, b) => a + b, 0);
+const initials = n => n.split(/[\s-]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+const colorFor = n => AV_COLORS[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_COLORS.length];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const avatarHTML = (name, cls = "") => `<div class="avatar ${cls}"><b style="background:${colorFor(name)}">${esc(initials(name))}</b></div>`;
+function ago(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return m + "m ago";
+  const h = Math.round(m / 60);
+  return h < 24 ? h + "h ago" : Math.round(h / 24) + "d ago";
+}
+
+// ---------------------------------------------------------------- API
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && url !== "/api/login") showSignIn();
+  if (!res.ok) throw new Error(data.error || "Something went wrong — please try again");
+  return data;
+}
+
+async function load(animate) {
+  const data = await api("GET", "/api/ideas");
+  const snap = JSON.stringify(data.ideas);
+  if (snap === snapshot) return;
+  snapshot = snap;
+  ideas = data.ideas;
+  render(animate);
+}
+
+// ---------------------------------------------------------------- render
+function visible() {
+  let list = ideas.filter(i => {
+    if (filter === "hack" || filter === "proc") return i.type === filter;
+    if (filter === "mine") return i.mine;
+    if (filter.startsWith("#")) return i.tags.some(t => t.toLowerCase() === filter.slice(1).toLowerCase());
+    return true;
+  });
+  if (query) {
+    const q = query.toLowerCase();
+    list = list.filter(i => (i.title + " " + i.desc + " " + i.author + " " + i.tags.join(" ")).toLowerCase().includes(q));
+  }
+  return list.sort(sort === "top" ? (a, b) => total(b) - total(a) || b.t - a.t : (a, b) => b.t - a.t);
+}
+const topRanking = () => [...ideas].sort((a, b) => total(b) - total(a) || b.t - a.t);
+
+function postHTML(i) {
+  const rankPos = topRanking().indexOf(i) + 1;
+  const rank = sort === "top" && rankPos <= 3 && total(i) > 0
+    ? `<div class="rank ${rankPos === 1 ? "gold" : ""}">${["👑","🥈","🥉"][rankPos-1]} #${rankPos} most reacted</div>` : "";
+  const media = i.img
+    ? `<div class="media">${rank}<img src="${esc(i.img)}" alt="" loading="lazy"></div>`
+    : `<div class="media">${rank}<div class="text-cover cover-${+i.cover || 1}">
+         <div class="q">“</div><h2>${esc(i.title)}</h2>
+         <div class="tagline">${i.type === "hack" ? "⚡ Hackathon idea" : "⚙️ Process improvement"}</div></div></div>`;
+  const chips = REACTIONS.map(x => `
+    <button class="chip ${i.myReaction === x.k ? "on" : ""}" data-react="${x.k}" data-id="${i.id}" title="${x.label}">
+      <span class="e">${x.e}</span>${i.r[x.k] || 0}</button>`).join("");
+  const body = (i.img ? `<h3>${esc(i.title)}</h3>` : "") + (i.desc ? `<p>${esc(i.desc)}</p>` : "")
+    + (i.tags.length ? `<div class="tags">${i.tags.map(t => `<button data-tag="${esc(t)}">#${esc(t)}</button>`).join("")}</div>` : "");
+  return `
+  <article class="post" data-post="${i.id}">
+    <div class="post-head">
+      ${avatarHTML(i.author)}
+      <div class="who"><div class="name">${esc(i.author)}</div><div class="meta">${esc(i.dept || "Coremind")} · ${ago(i.t)}</div></div>
+      <span class="pill ${i.type}">${i.type === "hack" ? "Hackathon" : "Process"}</span>
+      ${i.mine ? `<button class="del" data-delete="${i.id}" title="Delete your idea" aria-label="Delete your idea">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>` : ""}
+    </div>
+    ${media}
+    <div class="react-bar">${chips}<span class="total"><strong>${total(i)}</strong> reactions</span></div>
+    <div class="post-body">${body}</div>
+  </article>`;
+}
+
+function emptyHTML() {
+  if (query) return `<div class="empty"><b>No ideas match “${esc(query)}”</b>Try a different search.</div>`;
+  if (filter === "mine") return `<div class="empty"><b>You haven't shared an idea yet</b>Got something we could build or do better?<br><button class="btn-primary" data-open-new><span class="plus">＋</span> Share an idea</button></div>`;
+  return `<div class="empty"><b>No ideas here yet</b>Be the first to share one ✨<br><button class="btn-primary" data-open-new><span class="plus">＋</span> New idea</button></div>`;
+}
+
+// Re-render the feed; FLIP-animate cards that changed position
+function render(animate) {
+  const feed = $("#feed");
+  const before = {};
+  if (animate) feed.querySelectorAll(".post").forEach(el => before[el.dataset.post] = el.getBoundingClientRect().top);
+  const list = visible();
+  feed.innerHTML = list.length ? list.map(postHTML).join("") : emptyHTML();
+  if (animate) feed.querySelectorAll(".post").forEach(el => {
+    const prev = before[el.dataset.post];
+    if (prev == null) return;
+    const dy = prev - el.getBoundingClientRect().top;
+    if (dy) el.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 450, easing: "cubic-bezier(.2,.8,.2,1)" });
+  });
+  renderSide();
+}
+
+function renderSide() {
+  const top = topRanking().filter(i => total(i) > 0).slice(0, 5);
+  $("#leader").innerHTML = top.length ? top.map((i, n) =>
+    `<li><span class="n">${n + 1}</span><span class="t">${esc(i.title)}</span><span class="c">${total(i)}</span></li>`).join("")
+    : `<li class="none">No reactions yet — be the first!</li>`;
+  $("#statIdeas").textContent = ideas.length;
+  $("#statReacts").textContent = ideas.reduce((a, i) => a + total(i), 0);
+  $("#statPeople").textContent = new Set(ideas.map(i => i.author)).size;
+  const counts = { all: ideas.length, hack: ideas.filter(i => i.type === "hack").length,
+                   proc: ideas.filter(i => i.type === "proc").length, mine: ideas.filter(i => i.mine).length };
+  document.querySelectorAll("[data-count]").forEach(el => el.textContent = counts[el.dataset.count]);
+}
+
+function renderStories() {
+  $("#stories").innerHTML = CATS.map(c => `
+    <button class="story ${filter.toLowerCase() === c.k.toLowerCase() ? "active" : ""}" data-filter="${c.k}">
+      <div class="story-ring"><div class="story-inner">${c.e}</div></div><span>${c.label}</span></button>`).join("");
+}
+
+function setFilter(f) {
+  filter = f;
+  const cat = CATS.find(c => c.k.toLowerCase() === f.toLowerCase());
+  $("#feedTitle").textContent = f === "mine" ? "My ideas" : f === "all" ? "All ideas"
+    : f.startsWith("#") ? f : cat.label + " ideas";
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.filter === f));
+  renderStories();
+  render(false);
+}
+
+function setSort(s) {
+  sort = s;
+  document.querySelectorAll("#sortTabs button").forEach(b => b.classList.toggle("active", b.dataset.sort === s));
+}
+
+// ---------------------------------------------------------------- reactions
+let reorderTimer = null;
+const reactQueue = {};   // ideaId -> promise, so rapid clicks reach the server in order
+
+function applyReaction(idea, from, to) {
+  if (from) idea.r[from] = Math.max(0, (idea.r[from] || 0) - 1);
+  if (to) idea.r[to] = (idea.r[to] || 0) + 1;
+  idea.myReaction = to;
+}
+function redrawCard(idea, popKind) {
+  const card = document.querySelector(`[data-post="${idea.id}"]`);
+  if (!card) return;
+  card.outerHTML = postHTML(idea);
+  if (popKind) document.querySelector(`[data-post="${idea.id}"] [data-react="${popKind}"]`)?.classList.add("pop");
+}
+function scheduleReorder() {
+  // re-rank shortly after, so the card doesn't jump away from under the cursor
+  clearTimeout(reorderTimer);
+  reorderTimer = setTimeout(() => { reorderTimer = null; render(true); }, 700);
+}
+
+function react(id, kind) {
+  const idea = ideas.find(i => i.id === id);
+  if (!idea) return;
+  const prev = idea.myReaction || null;
+  const next = prev === kind ? null : kind;
+  applyReaction(idea, prev, next);
+  redrawCard(idea, next);
+  renderSide();
+  scheduleReorder();
+  reactQueue[id] = (reactQueue[id] || Promise.resolve()).then(async () => {
+    try {
+      const res = await api("PUT", `/api/ideas/${id}/reaction`, { kind: next });
+      // only the latest click decides what's shown; take the server's counts
+      if (idea.myReaction === next && JSON.stringify(res.r) !== JSON.stringify(idea.r)) {
+        idea.r = res.r; redrawCard(idea); renderSide();
+      }
+    } catch (err) {
+      if (idea.myReaction === next) { applyReaction(idea, next, prev); redrawCard(idea); renderSide(); }
+      toast(err.message);
+    }
+  });
+}
+
+async function deleteIdea(id) {
+  const idea = ideas.find(i => i.id === id);
+  if (!idea || !confirm(`Delete “${idea.title}”? Its reactions will be removed too.`)) return;
+  try {
+    await api("DELETE", `/api/ideas/${id}`);
+    ideas = ideas.filter(i => i !== idea);
+    render(true);
+    toast("Idea deleted");
+  } catch (err) { toast(err.message); }
+}
+
+// ---------------------------------------------------------------- events
+document.addEventListener("click", e => {
+  const t = e.target;
+  if (!t.closest(".me")) $("#meMenu").hidden = true;
+
+  const chip = t.closest("[data-react]");
+  if (chip) return react(+chip.dataset.id, chip.dataset.react);
+  const del = t.closest("[data-delete]");
+  if (del) return deleteIdea(+del.dataset.delete);
+  const tag = t.closest("[data-tag]");
+  if (tag) { setFilter("#" + tag.dataset.tag); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const f = t.closest("[data-filter]");
+  if (f) { e.preventDefault(); setFilter(f.dataset.filter); return; }
+  const s = t.closest("[data-sort]");
+  if (s) { setSort(s.dataset.sort); render(true); return; }
+  if (t.closest("[data-sort-link]")) {
+    e.preventDefault(); setSort("top"); setFilter("all"); window.scrollTo({ top: 0, behavior: "smooth" }); return;
+  }
+  if (t.closest("[data-open-new]")) return openModal();
+  if (t.closest("[data-close]") || t === $("#scrim")) return closeModal();
+});
+$("#q").addEventListener("input", e => { query = e.target.value.trim(); render(false); });
+$("#meBtn").addEventListener("click", () => { $("#meMenu").hidden = !$("#meMenu").hidden; });
+$("#signOut").addEventListener("click", async () => {
+  await api("POST", "/api/logout", {}).catch(() => {});
+  location.reload();
+});
+
+// ---------------------------------------------------------------- sign-in
+function showSignIn() {
+  me = null;
+  $("#signin").hidden = false;
+  setTimeout(() => $("#sName").focus(), 50);
+}
+function startApp(user) {
+  me = user;
+  $("#signin").hidden = true;
+  $("#meBtn").innerHTML = avatarHTML(user.name, "sm");
+  $("#meName").textContent = user.name;
+  $("#meMeta").textContent = (user.dept ? user.dept + " · " : "") + user.email;
+  load(false).catch(err => toast(err.message));
+}
+$("#signinForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("#sErr").textContent = "";
+  $("#sBtn").disabled = true;
+  try {
+    const { user } = await api("POST", "/api/login", {
+      name: $("#sName").value, dept: $("#sDept").value, email: $("#sEmail").value,
+    });
+    startApp(user);
+  } catch (err) {
+    $("#sErr").textContent = err.message;
+  } finally {
+    $("#sBtn").disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------- new idea
+let fType = "hack", fImg = null;
+function openModal() {
+  $("#scrim").classList.add("open");
+  setTimeout(() => $("#fTitle").focus(), 50);
+}
+function closeModal() { $("#scrim").classList.remove("open"); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); $("#meMenu").hidden = true; } });
+document.querySelectorAll(".type-opt").forEach(b => b.addEventListener("click", () => {
+  fType = b.dataset.type;
+  document.querySelectorAll(".type-opt").forEach(x => x.classList.toggle("on", x === b));
+}));
+$("#fTitle").addEventListener("input", e => {
+  $("#tCount").textContent = e.target.value.length;
+  $("#submitBtn").disabled = !e.target.value.trim();
+});
+
+// Shrink big photos in the browser before upload (max 1600px, JPEG)
+function resizeImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That file isn't an image we can read")); };
+    img.src = url;
+  });
+}
+async function setImage(file) {
+  if (!file) return;
+  try {
+    fImg = await resizeImage(file);
+    $("#drop").innerHTML = `<img src="${fImg}" alt=""><span class="rm" id="rmImg">Remove</span>`;
+  } catch (err) { toast(err.message); }
+}
+function clearImage() {
+  fImg = null;
+  $("#fImg").value = "";
+  $("#drop").innerHTML = DROP_EMPTY;
+}
+$("#drop").addEventListener("click", e => {
+  if (e.target.id === "rmImg") { e.stopPropagation(); clearImage(); } else $("#fImg").click();
+});
+$("#fImg").addEventListener("change", e => setImage(e.target.files[0]));
+$("#drop").addEventListener("dragover", e => e.preventDefault());
+$("#drop").addEventListener("drop", e => { e.preventDefault(); setImage(e.dataTransfer.files[0]); });
+
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title = $("#fTitle").value.trim();
+  if (!title) return;
+  const btn = $("#submitBtn");
+  btn.disabled = true; btn.textContent = "Posting…"; $("#fErr").textContent = "";
+  try {
+    const { idea } = await api("POST", "/api/ideas", {
+      type: fType, title, desc: $("#fDesc").value,
+      tags: $("#fTags").value.split(",").map(s => s.trim().replace(/^#/, "")).filter(Boolean),
+      image: fImg,
+    });
+    ideas.unshift(idea);
+    $("#form").reset(); clearImage(); $("#tCount").textContent = 0;
+    closeModal();
+    setSort("new");
+    setFilter("all");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast("🎉 Your idea is live — invite colleagues to react!");
+  } catch (err) {
+    $("#fErr").textContent = err.message;
+  } finally {
+    btn.textContent = "Post idea";
+    btn.disabled = !$("#fTitle").value.trim();
+  }
+});
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+// ---------------------------------------------------------------- countdown & live refresh
+const deadline = new Date(HACKATHON_DEADLINE).getTime();
+function tick() {
+  const d = Math.max(0, deadline - Date.now());
+  const v = [Math.floor(d / 864e5), Math.floor(d / 36e5) % 24, Math.floor(d / 6e4) % 60];
+  document.querySelectorAll("#countdown b").forEach((b, n) => b.textContent = String(v[n]).padStart(2, "0"));
+}
+tick(); setInterval(tick, 30e3);
+
+setInterval(() => {
+  if (me && !document.hidden && !reorderTimer) load(true).catch(() => {});
+}, POLL_MS);
+document.addEventListener("visibilitychange", () => {
+  if (me && !document.hidden) load(true).catch(() => {});
+});
+
+// ---------------------------------------------------------------- start
+clearImage();
+renderStories();
+api("GET", "/api/me")
+  .then(({ user, emailDomain }) => {
+    if (emailDomain) $("#sEmail").placeholder = "you@" + emailDomain;
+    user ? startApp(user) : showSignIn();
+  })
+  .catch(() => toast("Can't reach the Idea Hub server"));
+</script>
+</body>
+</html>
